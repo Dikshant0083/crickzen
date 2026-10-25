@@ -1,3 +1,4 @@
+import { demoMobile, DEMO_TEAMS as TEAMS } from '@criczen/shared';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import {
   createMatch,
@@ -12,73 +13,6 @@ import {
 import { setupPayloads } from './match';
 import { rng, simulate } from './simulate';
 import { type Fixture, firstFixtures, suggestPlayerOfMatch, type Tournament } from './tournament';
-
-const TEAMS: readonly [string, string[]][] = [
-  [
-    'Royal Strikers',
-    [
-      'Aarav Sharma',
-      'Rohan Mehta',
-      'Vikram Singh',
-      'Karan Patel',
-      'Arjun Nair',
-      'Siddharth Rao',
-      'Manish Yadav',
-      'Pranav Joshi',
-      'Harsh Gupta',
-      'Nikhil Verma',
-      'Deepak Chauhan',
-    ],
-  ],
-  [
-    'Thunder Kings',
-    [
-      'Ishaan Reddy',
-      'Aditya Kulkarni',
-      'Rahul Desai',
-      'Varun Iyer',
-      'Kunal Shah',
-      'Yash Malhotra',
-      'Gaurav Pandey',
-      'Sameer Khan',
-      'Abhishek Mishra',
-      'Tarun Bhatt',
-      'Mohit Saini',
-    ],
-  ],
-  [
-    'Coastal Warriors',
-    [
-      'Dev Menon',
-      'Akash Pillai',
-      'Rajat Jain',
-      'Sahil Kapoor',
-      'Ankit Tiwari',
-      'Ritesh Dubey',
-      'Vivek Sinha',
-      'Naveen Kumar',
-      'Sunil Rawat',
-      'Imran Qureshi',
-      'Ajay Thakur',
-    ],
-  ],
-  [
-    'Desert Eagles',
-    [
-      'Kabir Bhatia',
-      'Om Prakash',
-      'Lakshya Sen',
-      'Parth Agarwal',
-      'Ravi Bishnoi',
-      'Hemant Rathore',
-      'Jatin Saxena',
-      'Uday Chopra',
-      'Bharat Meena',
-      'Firoz Ali',
-      'Chetan Gehlot',
-    ],
-  ],
-];
 
 /** Position in the XI decides the role: openers bat, the last five bowl. */
 function roleFor(i: number): Role {
@@ -114,7 +48,7 @@ export async function loadDemoData(db: SQLiteDatabase): Promise<string | null> {
       (name, i): Player => ({
         id: `demo-p${t}-${i}`,
         name,
-        mobile: `90000${String(t * 11 + i + 1).padStart(5, '0')}`,
+        mobile: demoMobile(t, i),
         role: roleFor(i),
       }),
     );

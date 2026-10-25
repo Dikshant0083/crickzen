@@ -8,7 +8,8 @@
     "start": "tsx --env-file-if-exists=.env src/server.ts",
     "db:generate": "drizzle-kit generate",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:seed": "tsx --env-file-if-exists=.env src/seed-cli.ts"
   },
   "dependencies": {
     "@criczen/shared": "workspace:*",
