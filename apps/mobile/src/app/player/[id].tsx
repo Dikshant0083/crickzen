@@ -8,7 +8,7 @@ import { oversText } from '../../match';
 import { initials, ROLE } from '../../people';
 import { average, careerStats, rate } from '../../stats';
 import { C } from '../../theme';
-import { Button, Card, Empty, Stat, text } from '../../ui';
+import { Card, Empty, Stat, text } from '../../ui';
 
 export default function PlayerProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -43,18 +43,9 @@ export default function PlayerProfile() {
         </View>
         <View style={{ flex: 1 }}>
           <Text style={text.h1}>{player.name}</Text>
-          <Text style={text.muted}>
-            {ROLE[player.role].label}
-            {player.mobile === null ? '' : `  ·  ${player.mobile}`}
-          </Text>
+          <Text style={text.muted}>{ROLE[player.role].label}</Text>
         </View>
       </View>
-      <Button
-        label="Edit player"
-        icon="create"
-        variant="ghost"
-        onPress={() => router.push({ pathname: '/player/edit', params: { id } })}
-      />
 
       <Card title={`Batting · ${c.matches} matches`}>
         <View style={styles.grid}>

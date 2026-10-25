@@ -7,17 +7,16 @@ import { ROLE } from './people';
 import { isValidMobile, normalizeMobile } from './stats';
 import { Button, Choice, Field } from './ui';
 
-/** Add or edit a directory player. The mobile number is optional but must be unique. */
+/** Adds a new player. The mobile number is optional but must be unique. */
 export function PlayerForm(props: {
-  initial?: Player;
   initialName?: string;
   initialMobile?: string;
   onSaved: (player: Player) => void;
 }) {
   const db = useSQLiteContext();
-  const [name, setName] = useState(props.initial?.name ?? props.initialName ?? '');
-  const [mobile, setMobile] = useState(props.initial?.mobile ?? props.initialMobile ?? '');
-  const [role, setRole] = useState<Role>(props.initial?.role ?? 'batter');
+  const [name, setName] = useState(props.initialName ?? '');
+  const [mobile, setMobile] = useState(props.initialMobile ?? '');
+  const [role, setRole] = useState<Role>('batter');
 
   const save = async () => {
     const trimmed = name.trim();
@@ -27,7 +26,7 @@ export function PlayerForm(props: {
       return Alert.alert('Check the number', 'Mobile number should have 10 digits.');
     }
     const player: Player = {
-      id: props.initial?.id ?? randomUUID(),
+      id: randomUUID(),
       name: trimmed,
       mobile: normalized,
       role,
@@ -59,13 +58,7 @@ export function PlayerForm(props: {
         value={role}
         onChange={setRole}
       />
-      <Button
-        label={props.initial === undefined ? 'Add player' : 'Save'}
-        icon="checkmark"
-        variant="primary"
-        size="lg"
-        onPress={save}
-      />
+      <Button label="Add player" icon="checkmark" variant="primary" size="lg" onPress={save} />
     </View>
   );
 }

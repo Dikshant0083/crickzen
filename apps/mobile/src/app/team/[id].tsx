@@ -13,7 +13,7 @@ import {
   saveTeam,
 } from '../../db';
 import { PlayerPicker } from '../../PlayerPicker';
-import { ROLE } from '../../people';
+import { maskMobile, ROLE } from '../../people';
 import { type TeamRecord, teamRecord } from '../../stats';
 import { C } from '../../theme';
 import { Button, Card, Empty, Field, Stat } from '../../ui';
@@ -107,7 +107,7 @@ export default function TeamScreen() {
               <Text style={styles.name}>{p.name}</Text>
               <Text style={styles.sub}>
                 {ROLE[p.role].label}
-                {p.mobile === null ? '' : `  ·  ${p.mobile}`}
+                {p.mobile === null ? '' : `  ·  ${maskMobile(p.mobile)}`}
               </Text>
             </View>
             <Pressable

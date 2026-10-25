@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { listPlayers, type Player } from './db';
 import { PlayerForm } from './PlayerForm';
-import { initials, matchesQuery, ROLE } from './people';
+import { initials, maskMobile, matchesQuery, ROLE } from './people';
 import { C, radius } from './theme';
 import { Button, Sheet } from './ui';
 
@@ -65,7 +65,7 @@ export function PlayerPicker(props: {
             <Ionicons name="search" size={18} color={C.faint} />
             <TextInput
               accessibilityLabel="Search by name or mobile number"
-              placeholder="Name or mobile number"
+              placeholder="Name or full mobile number"
               placeholderTextColor={C.faint}
               value={query}
               onChangeText={setQuery}
@@ -102,7 +102,7 @@ export function PlayerPicker(props: {
                   <Text style={styles.name}>{p.name}</Text>
                   <Text style={styles.sub}>
                     {taken ? 'In the other team' : ROLE[p.role].label}
-                    {p.mobile === null ? '' : `  ·  ${p.mobile}`}
+                    {p.mobile === null ? '' : `  ·  ${maskMobile(p.mobile)}`}
                   </Text>
                 </View>
                 <Ionicons

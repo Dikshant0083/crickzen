@@ -5,7 +5,7 @@ import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-na
 import { listPlayers, useFocusLoad } from '../../db';
 import { initials, matchesQuery, ROLE } from '../../people';
 import { C, radius } from '../../theme';
-import { Button, Empty } from '../../ui';
+import { Empty } from '../../ui';
 
 export default function Players() {
   const [players] = useFocusLoad(listPlayers);
@@ -18,20 +18,14 @@ export default function Players() {
         <View style={styles.search}>
           <Ionicons name="search" size={18} color={C.faint} />
           <TextInput
-            accessibilityLabel="Search players by name or mobile"
-            placeholder="Name or mobile number"
+            accessibilityLabel="Search players by name or full mobile number"
+            placeholder="Name or full mobile number"
             placeholderTextColor={C.faint}
             value={query}
             onChangeText={setQuery}
             style={styles.searchInput}
           />
         </View>
-        <Button
-          label="Add"
-          icon="person-add"
-          variant="primary"
-          onPress={() => router.push('/player/edit')}
-        />
       </View>
       <FlatList
         data={shown}
@@ -42,7 +36,7 @@ export default function Players() {
             <Empty
               icon="people-outline"
               title={query === '' ? 'No players yet' : 'No match'}
-              hint="Add players once, then pick them for any match."
+              hint="Players are added from a team or match setup."
             />
           )
         }
@@ -57,10 +51,7 @@ export default function Players() {
             </View>
             <View style={styles.flex}>
               <Text style={styles.name}>{item.name}</Text>
-              <Text style={styles.sub}>
-                {ROLE[item.role].label}
-                {item.mobile === null ? '' : `  ·  ${item.mobile}`}
-              </Text>
+              <Text style={styles.sub}>{ROLE[item.role].label}</Text>
             </View>
             <Ionicons name="chevron-forward" size={20} color={C.faint} />
           </Pressable>
