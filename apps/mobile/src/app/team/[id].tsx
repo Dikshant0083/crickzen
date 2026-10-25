@@ -4,14 +4,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import {
-  deleteTeam,
-  listPlayers,
-  listTeams,
-  loadAllMatches,
-  type Player,
-  saveTeam,
-} from '../../db';
+import { listPlayers, listTeams, loadAllMatches, type Player, saveTeam } from '../../db';
 import { PlayerPicker } from '../../PlayerPicker';
 import { maskMobile, ROLE } from '../../people';
 import { type TeamRecord, teamRecord } from '../../stats';
@@ -59,16 +52,6 @@ export default function TeamScreen() {
     if (problem !== null) return Alert.alert('Name taken', problem);
     router.back();
   };
-
-  const remove = () =>
-    Alert.alert('Delete team?', 'Players and past matches are kept.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => deleteTeam(db, id).then(() => router.back()),
-      },
-    ]);
 
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
@@ -122,7 +105,6 @@ export default function TeamScreen() {
         ))}
       </Card>
       <Button label="Save team" icon="checkmark" variant="primary" size="lg" onPress={save} />
-      {!isNew && <Button label="Delete team" icon="trash" variant="ghost" onPress={remove} />}
       <PlayerPicker
         visible={picking}
         title="Add players"

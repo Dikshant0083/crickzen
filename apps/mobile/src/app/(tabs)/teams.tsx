@@ -1,13 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { DevTools } from '../../DevTools';
 import { listTeams, useFocusLoad } from '../../db';
 import { initials } from '../../people';
 import { C, radius } from '../../theme';
 import { Button, Empty } from '../../ui';
 
 export default function Teams() {
-  const [teams] = useFocusLoad(listTeams);
+  const [teams, reload] = useFocusLoad(listTeams);
 
   return (
     <View style={styles.screen}>
@@ -31,6 +32,7 @@ export default function Teams() {
             />
           )
         }
+        ListFooterComponent={<DevTools onChange={reload} />}
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"

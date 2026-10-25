@@ -3,17 +3,8 @@ import { randomUUID } from 'expo-crypto';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { type SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useState } from 'react';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import {
-  ActivityIndicator,
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import {
-  deleteTournament,
   getTournament,
   insertFixtures,
   listFixtures,
@@ -91,16 +82,6 @@ export default function TournamentScreen() {
     reload();
   };
 
-  const remove = () =>
-    Alert.alert('Delete tournament?', 'Its matches stay in your match list.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: () => deleteTournament(db, t.id).then(() => router.back()),
-      },
-    ]);
-
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <Stack.Screen options={{ title: t.name }} />
@@ -146,8 +127,6 @@ export default function TournamentScreen() {
         ))}
 
       {tab === 'leaders' && <Leaders matches={tournamentMatches} />}
-
-      <Button label="Delete tournament" icon="trash" variant="ghost" onPress={remove} />
     </ScrollView>
   );
 }

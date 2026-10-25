@@ -123,10 +123,6 @@ export async function saveTeam(db: SQLiteDatabase, team: Team): Promise<string |
   return null;
 }
 
-export function deleteTeam(db: SQLiteDatabase, id: string) {
-  return db.runAsync('DELETE FROM teams WHERE id = ?', id);
-}
-
 export interface StoredMatch {
   id: string;
   meta: MatchMeta;
@@ -200,15 +196,6 @@ export async function createMatch(
     await insertEvents(db, events);
   });
   return null;
-}
-
-export async function deleteMatch(db: SQLiteDatabase, matchId: string) {
-  await db.withTransactionAsync(async () => {
-    await db.runAsync('DELETE FROM events WHERE match_id = ?', matchId);
-    // A tournament fixture whose match is deleted can be played again.
-    await db.runAsync('UPDATE fixtures SET match_id = NULL WHERE match_id = ?', matchId);
-    await db.runAsync('DELETE FROM matches WHERE id = ?', matchId);
-  });
 }
 
 export async function loadEvents(db: SQLiteDatabase, matchId: string): Promise<MatchEvent[]> {
@@ -366,11 +353,4 @@ export async function getFixture(db: SQLiteDatabase, id: string): Promise<Fixtur
 
 export async function linkFixture(db: SQLiteDatabase, fixtureId: string, matchId: string) {
   await db.runAsync('UPDATE fixtures SET match_id = ? WHERE id = ?', matchId, fixtureId);
-}
-
-export async function deleteTournament(db: SQLiteDatabase, id: string) {
-  await db.withTransactionAsync(async () => {
-    await db.runAsync('DELETE FROM fixtures WHERE tournament_id = ?', id);
-    await db.runAsync('DELETE FROM tournaments WHERE id = ?', id);
-  });
 }

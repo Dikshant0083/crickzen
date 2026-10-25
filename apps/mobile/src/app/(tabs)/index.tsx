@@ -1,56 +1,12 @@
 import { router } from 'expo-router';
-import { type SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
-import { useState } from 'react';
-import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { deleteMatch, loadAllMatches, type StoredMatch, useFocusLoad } from '../../db';
-import { hasDemoData, loadDemoData, removeDemoData } from '../../demo';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { loadAllMatches, type StoredMatch, useFocusLoad } from '../../db';
 import { oversText } from '../../match';
 import { C, radius } from '../../theme';
 import { Button, Empty, text } from '../../ui';
 
-const loadScreen = async (db: SQLiteDatabase) => ({
-  list: await loadAllMatches(db),
-  demo: await hasDemoData(db),
-});
-
 export default function Matches() {
-  const db = useSQLiteContext();
-  const [data, reload] = useFocusLoad(loadScreen);
-  const matches = data?.list ?? null;
-  const [busy, setBusy] = useState(false);
-
-  const toggleDemo = async () => {
-    if (data?.demo === true) {
-      return Alert.alert(
-        'Remove demo data?',
-        'Deletes only the demo teams, players, matches and tournament.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Remove', style: 'destructive', onPress: () => removeDemoData(db).then(reload) },
-        ],
-      );
-    }
-    setBusy(true);
-    try {
-      const problem = await loadDemoData(db);
-      if (problem !== null) Alert.alert('Demo data not loaded', problem);
-    } catch (e) {
-      Alert.alert('Demo data not loaded', String(e));
-    } finally {
-      setBusy(false);
-      reload();
-    }
-  };
-
-  const confirmDelete = (m: StoredMatch) =>
-    Alert.alert(
-      'Delete match?',
-      `${m.state.config.teams.join(' vs ')} and its stats will be removed.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => deleteMatch(db, m.id).then(reload) },
-      ],
-    );
+  const [matches] = useFocusLoad(loadAllMatches);
 
   return (
     <View style={styles.screen}>
@@ -70,24 +26,10 @@ export default function Matches() {
             <Empty icon="baseball-outline" title="No matches yet" hint="Start one above." />
           )
         }
-        ListFooterComponent={
-          data === null ? undefined : (
-            <Button
-              label={
-                busy ? 'Loading demo data…' : data.demo ? 'Remove demo data' : 'Load demo data'
-              }
-              icon={data.demo ? 'trash-outline' : 'flask-outline'}
-              variant="ghost"
-              disabled={busy}
-              onPress={toggleDemo}
-            />
-          )
-        }
         renderItem={({ item }) => (
           <MatchCard
             match={item}
             onPress={() => router.push({ pathname: '/match/[id]', params: { id: item.id } })}
-            onLongPress={() => confirmDelete(item)}
           />
         )}
       />
@@ -95,7 +37,7 @@ export default function Matches() {
   );
 }
 
-function MatchCard(props: { match: StoredMatch; onPress: () => void; onLongPress: () => void }) {
+function MatchCard(props: { match: StoredMatch; onPress: () => void }) {
   const { state, meta, createdAt } = props.match;
   const live = state.result === null && state.status !== 'abandoned';
   const [a, b] = state.config.teams;
@@ -107,9 +49,7 @@ function MatchCard(props: { match: StoredMatch; onPress: () => void; onLongPress
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityHint="Opens the match. Long press to delete."
       onPress={props.onPress}
-      onLongPress={props.onLongPress}
       style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}
     >
       <View style={styles.head}>
