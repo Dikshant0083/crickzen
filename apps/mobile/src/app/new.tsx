@@ -1,9 +1,19 @@
 import { randomUUID } from 'expo-crypto';
-import { router } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useSQLiteContext } from 'expo-sqlite';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { createMatch, listPlayers, listTeams, type Player, saveTeam, type Team } from '../db';
+import {
+  createMatch,
+  getFixture,
+  getTournament,
+  linkFixture,
+  listPlayers,
+  listTeams,
+  type Player,
+  saveTeam,
+  type Team,
+} from '../db';
 import { setupPayloads } from '../match';
 import { PlayerPicker } from '../PlayerPicker';
 import { C, radius } from '../theme';
@@ -27,7 +37,10 @@ const emptySide: Side = {
 const OVERS = ['5', '6', '8', '10', '12', '15', '20', '50'] as const;
 
 export default function NewMatch() {
+  /** Set when starting a tournament fixture: teams, overs and ball are fixed by the tournament. */
+  const { fixture } = useLocalSearchParams<{ fixture?: string }>();
   const db = useSQLiteContext();
+  const [locked, setLocked] = useState<string | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [directory, setDirectory] = useState<Player[]>([]);
   const [sides, setSides] = useState<[Side, Side]>([emptySide, emptySide]);
@@ -38,9 +51,29 @@ export default function NewMatch() {
   const [tossChoice, setTossChoice] = useState<'bat' | 'bowl' | null>(null);
 
   useEffect(() => {
-    listTeams(db).then(setTeams);
-    listPlayers(db).then(setDirectory);
-  }, [db]);
+    (async () => {
+      const [saved, players] = await Promise.all([listTeams(db), listPlayers(db)]);
+      setTeams(saved);
+      setDirectory(players);
+      if (fixture === undefined) return;
+      const f = await getFixture(db, fixture);
+      const t = f === null ? null : await getTournament(db, f.tournamentId);
+      if (f === null || t === null || f.away === null) return;
+      const side = (name: string): Side => {
+        const team = saved.find((x) => x.id === t.teams.find((y) => y.name === name)?.id);
+        return {
+          ...emptySide,
+          name,
+          savedTeamId: team?.id ?? null,
+          players: (team?.playerIds ?? []).flatMap((pid) => players.filter((p) => p.id === pid)),
+        };
+      };
+      setSides([side(f.home), side(f.away)]);
+      setOvers(String(t.overs));
+      setBall(t.ball);
+      setLocked(t.name);
+    })();
+  }, [db, fixture]);
 
   const update = (i: 0 | 1, fn: (s: Side) => Side) =>
     setSides((prev) => (i === 0 ? [fn(prev[0]), prev[1]] : [prev[0], fn(prev[1])]));
@@ -123,16 +156,26 @@ export default function NewMatch() {
       }),
     );
     if (error !== null) return Alert.alert('Could not start the match', error);
+    if (fixture !== undefined && locked !== null) await linkFixture(db, fixture, matchId);
     router.replace({ pathname: '/match/[id]', params: { id: matchId } });
   };
 
   return (
     <ScrollView contentContainerStyle={styles.screen} keyboardShouldPersistTaps="handled">
+      {locked !== null && (
+        <>
+          <Stack.Screen options={{ title: locked }} />
+          <Text style={text.muted}>
+            {overs} overs · {ball === 'tennis' ? 'tennis' : 'leather'} ball. Pick the playing XIs
+            and record the toss.
+          </Text>
+        </>
+      )}
       {([0, 1] as const).map((i) => {
         const side = sides[i];
         return (
           <Card key={i} title={`Team ${i + 1}`}>
-            {teams.length > 0 && (
+            {locked === null && teams.length > 0 && (
               <View style={styles.wrap}>
                 {teams.map((t) => (
                   <Chip
@@ -144,12 +187,16 @@ export default function NewMatch() {
                 ))}
               </View>
             )}
-            <Field
-              label="Team name"
-              value={side.name}
-              onChangeText={(name) => update(i, (s) => ({ ...s, name, savedTeamId: null }))}
-              placeholder={teams.length > 0 ? 'Or type a new team' : 'e.g. Royal Strikers'}
-            />
+            {locked === null ? (
+              <Field
+                label="Team name"
+                value={side.name}
+                onChangeText={(name) => update(i, (s) => ({ ...s, name, savedTeamId: null }))}
+                placeholder={teams.length > 0 ? 'Or type a new team' : 'e.g. Royal Strikers'}
+              />
+            ) : (
+              <Text style={text.h2}>{side.name}</Text>
+            )}
             <View style={styles.squadHead}>
               <Text style={text.label}>Playing XI · {side.players.length}</Text>
               <Button label="Add players" icon="person-add" onPress={() => setPicking(i)} />
@@ -178,35 +225,39 @@ export default function NewMatch() {
         );
       })}
 
-      <Card title="Overs">
-        <Choice
-          options={OVERS.map((o) => ({ value: o, label: o }))}
-          value={overs as (typeof OVERS)[number]}
-          onChange={setOvers}
-        />
-        <Field
-          label="Custom overs"
-          value={overs}
-          onChangeText={setOvers}
-          keyboardType="number-pad"
-        />
-      </Card>
+      {locked === null && (
+        <>
+          <Card title="Overs">
+            <Choice
+              options={OVERS.map((o) => ({ value: o, label: o }))}
+              value={overs as (typeof OVERS)[number]}
+              onChange={setOvers}
+            />
+            <Field
+              label="Custom overs"
+              value={overs}
+              onChangeText={setOvers}
+              keyboardType="number-pad"
+            />
+          </Card>
 
-      <Card title="Ball">
-        <Choice
-          options={[
-            { value: 'tennis', label: 'Tennis ball' },
-            { value: 'leather', label: 'Leather ball' },
-          ]}
-          value={ball}
-          onChange={setBall}
-        />
-        <Text style={text.muted}>
-          {ball === 'tennis'
-            ? 'Local rules: no free hit, super over on a tie.'
-            : 'Laws of Cricket: free hit after a no-ball.'}
-        </Text>
-      </Card>
+          <Card title="Ball">
+            <Choice
+              options={[
+                { value: 'tennis', label: 'Tennis ball' },
+                { value: 'leather', label: 'Leather ball' },
+              ]}
+              value={ball}
+              onChange={setBall}
+            />
+            <Text style={text.muted}>
+              {ball === 'tennis'
+                ? 'Local rules: no free hit, super over on a tie.'
+                : 'Laws of Cricket: free hit after a no-ball.'}
+            </Text>
+          </Card>
+        </>
+      )}
 
       <Card title="Toss">
         <Choice

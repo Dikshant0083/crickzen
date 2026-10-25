@@ -28,6 +28,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="index" options={tab('Matches', 'baseball')} />
       <Tabs.Screen name="players" options={tab('Players', 'people')} />
+      <Tabs.Screen name="tournaments" options={tab('Cups', 'trophy')} />
       <Tabs.Screen name="teams" options={tab('Teams', 'shield')} />
     </Tabs>
   );

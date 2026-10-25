@@ -26,6 +26,16 @@ export {
   netRunRate,
 } from './rules/outcome.js';
 export {
+  type KnockoutPair,
+  knockoutRound,
+  type Pairing,
+  POINTS,
+  roundRobin,
+  type StandingsMatch,
+  type StandingsRow,
+  standings,
+} from './rules/tournament.js';
+export {
   allOutWicketCount,
   allOutWicketsFor,
   availableBatters,

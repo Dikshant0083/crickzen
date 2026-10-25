@@ -23,6 +23,8 @@ export default function Layout() {
         <Stack.Screen name="player/[id]" options={{ title: 'Player' }} />
         <Stack.Screen name="player/edit" options={{ title: 'Player', presentation: 'modal' }} />
         <Stack.Screen name="team/[id]" options={{ title: 'Team' }} />
+        <Stack.Screen name="tournament/new" options={{ title: 'New tournament' }} />
+        <Stack.Screen name="tournament/[id]" options={{ title: 'Tournament' }} />
       </Stack>
     </SQLiteProvider>
   );

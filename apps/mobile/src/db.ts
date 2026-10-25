@@ -4,6 +4,7 @@ import { useFocusEffect } from 'expo-router';
 import { type SQLiteDatabase, useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MatchMeta } from './match';
+import type { Fixture, Tournament } from './tournament';
 
 export async function migrate(db: SQLiteDatabase) {
   await db.execAsync(`
@@ -26,6 +27,18 @@ export async function migrate(db: SQLiteDatabase) {
       mobile TEXT UNIQUE,
       role TEXT NOT NULL DEFAULT 'batter',
       created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS tournaments (
+      id TEXT PRIMARY KEY NOT NULL,
+      body TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS fixtures (
+      id TEXT PRIMARY KEY NOT NULL,
+      tournament_id TEXT NOT NULL,
+      seq INTEGER NOT NULL,
+      body TEXT NOT NULL,
+      match_id TEXT UNIQUE
     );
     CREATE TABLE IF NOT EXISTS teams (
       id TEXT PRIMARY KEY NOT NULL,
@@ -192,6 +205,8 @@ export async function createMatch(
 export async function deleteMatch(db: SQLiteDatabase, matchId: string) {
   await db.withTransactionAsync(async () => {
     await db.runAsync('DELETE FROM events WHERE match_id = ?', matchId);
+    // A tournament fixture whose match is deleted can be played again.
+    await db.runAsync('UPDATE fixtures SET match_id = NULL WHERE match_id = ?', matchId);
     await db.runAsync('DELETE FROM matches WHERE id = ?', matchId);
   });
 }
@@ -264,7 +279,18 @@ export function useMatch(db: SQLiteDatabase, matchId: string) {
     [db, matchId, setMatch],
   );
 
-  return { match, error, append };
+  /** Display-only data such as Player of the Match; not part of the event log. */
+  const setMeta = useCallback(
+    async (meta: MatchMeta) => {
+      const current = latest.current;
+      if (current === null) return;
+      await setMatchMeta(db, matchId, meta);
+      setMatch({ ...current, meta });
+    },
+    [db, matchId, setMatch],
+  );
+
+  return { match, error, append, setMeta };
 }
 
 /** Loads on every focus, so lists are fresh after editing on another screen. */
@@ -276,4 +302,75 @@ export function useFocusLoad<T>(load: (db: SQLiteDatabase) => Promise<T>): [T | 
   }, [db, load]);
   useFocusEffect(reload);
   return [data, reload];
+}
+
+export async function setMatchMeta(db: SQLiteDatabase, matchId: string, meta: MatchMeta) {
+  await db.runAsync('UPDATE matches SET meta = ? WHERE id = ?', JSON.stringify(meta), matchId);
+}
+
+export async function listTournaments(db: SQLiteDatabase): Promise<Tournament[]> {
+  const rows = await db.getAllAsync<{ body: string }>(
+    'SELECT body FROM tournaments ORDER BY created_at DESC',
+  );
+  return rows.map((r) => JSON.parse(r.body) as Tournament);
+}
+
+export async function getTournament(db: SQLiteDatabase, id: string): Promise<Tournament | null> {
+  const row = await db.getFirstAsync<{ body: string }>(
+    'SELECT body FROM tournaments WHERE id = ?',
+    id,
+  );
+  return row === null ? null : (JSON.parse(row.body) as Tournament);
+}
+
+export async function createTournament(db: SQLiteDatabase, t: Tournament, fixtures: Fixture[]) {
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      'INSERT INTO tournaments (id, body, created_at) VALUES (?, ?, ?)',
+      t.id,
+      JSON.stringify(t),
+      t.createdAt,
+    );
+    await insertFixtures(db, fixtures);
+  });
+}
+
+export async function insertFixtures(db: SQLiteDatabase, fixtures: readonly Fixture[]) {
+  for (const f of fixtures) {
+    await db.runAsync(
+      'INSERT INTO fixtures (id, tournament_id, seq, body, match_id) VALUES (?, ?, ?, ?, ?)',
+      f.id,
+      f.tournamentId,
+      f.seq,
+      JSON.stringify(f),
+      f.matchId,
+    );
+  }
+}
+
+export async function listFixtures(db: SQLiteDatabase, tournamentId: string): Promise<Fixture[]> {
+  const rows = await db.getAllAsync<{ body: string; match_id: string | null }>(
+    'SELECT body, match_id FROM fixtures WHERE tournament_id = ? ORDER BY seq',
+    tournamentId,
+  );
+  return rows.map((r) => ({ ...(JSON.parse(r.body) as Fixture), matchId: r.match_id }));
+}
+
+export async function getFixture(db: SQLiteDatabase, id: string): Promise<Fixture | null> {
+  const row = await db.getFirstAsync<{ body: string; match_id: string | null }>(
+    'SELECT body, match_id FROM fixtures WHERE id = ?',
+    id,
+  );
+  return row === null ? null : { ...(JSON.parse(row.body) as Fixture), matchId: row.match_id };
+}
+
+export async function linkFixture(db: SQLiteDatabase, fixtureId: string, matchId: string) {
+  await db.runAsync('UPDATE fixtures SET match_id = ? WHERE id = ?', matchId, fixtureId);
+}
+
+export async function deleteTournament(db: SQLiteDatabase, id: string) {
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM fixtures WHERE tournament_id = ?', id);
+    await db.runAsync('DELETE FROM tournaments WHERE id = ?', id);
+  });
 }

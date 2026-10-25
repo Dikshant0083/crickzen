@@ -119,6 +119,10 @@ Two rules that are routinely implemented wrong:
 
 Abandoned and no-result matches are excluded from NRR entirely but may still award points.
 
+**Points and ranking** (`standings` in `rules/tournament.ts`): win 2, tie 1, no result 1, loss 0. A tie decided by a super over counts as a win/loss for points; NRR still uses only the main match. Sides are ranked by points, then wins, then NRR, then name. Head-to-head is not used.
+
+**Fixtures:** league fixtures use the circle method (every pair once per leg, nobody twice in a round, odd counts get a bye). Knockout rounds pad to a power of two with byes for the top seeds; seed 1 meets the lowest seed, and each later round re-seeds the winners in fixture order.
+
 ## 8. Powerplay and fielding restrictions (§2)
 
 Stored as over ranges in `MatchConfig`. The engine exposes which phase a delivery fell in so §6's powerplay/middle/death analysis is a projection, not a re-derivation at query time.
