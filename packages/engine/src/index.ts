@@ -27,6 +27,7 @@ export {
 } from './rules/outcome.js';
 export {
   allOutWicketCount,
+  allOutWicketsFor,
   availableBatters,
   ballsInCurrentOver,
   ballsRemaining,

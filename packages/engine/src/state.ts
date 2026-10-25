@@ -137,9 +137,13 @@ export function availableBatters(state: MatchState, innings: InningsState): Play
 
 /** Wickets that end the innings: one fewer than the number who can bat. */
 export function allOutWicketCount(state: MatchState, innings: InningsState): number {
-  const squad = squadOf(state, innings.battingTeamId);
+  return allOutWicketsFor(state, innings.battingTeamId);
+}
+
+export function allOutWicketsFor(state: MatchState, teamId: TeamId): number {
+  const squad = squadOf(state, teamId);
   const size = squad?.playingXI.length ?? state.config.playersPerSide;
-  return size - 1;
+  return Math.min(size - 1, state.config.wicketsPerInnings ?? Number.POSITIVE_INFINITY);
 }
 
 /** Legal balls remaining in the innings. */

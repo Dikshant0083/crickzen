@@ -5,13 +5,13 @@ import { bowlerIsCredited, resolveEnds } from './rules/dismissal.js';
 import { computeResult, terminalResult } from './rules/outcome.js';
 import {
   allOutWicketCount,
+  allOutWicketsFor,
   currentInnings,
   initialState,
   newBatter,
   newBowler,
   newInnings,
   otherTeam,
-  squadOf,
 } from './state.js';
 import type {
   BallRecord,
@@ -571,10 +571,7 @@ function closeInnings(state: MatchState, reason: InningsCloseReason): MatchState
     result: computeResult({
       config: withClosed.config,
       innings: withClosed.innings,
-      allOutWickets: (teamId) => {
-        const squad = squadOf(withClosed, teamId);
-        return (squad?.playingXI.length ?? withClosed.config.playersPerSide) - 1;
-      },
+      allOutWickets: (teamId) => allOutWicketsFor(withClosed, teamId),
     }),
   };
 }

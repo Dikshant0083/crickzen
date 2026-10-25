@@ -34,6 +34,13 @@ pnpm install
 pnpm verify        # lint + typecheck + test
 ```
 
+Run the scorer app on your phone (install **Expo Go** from the App Store / Play Store,
+same Wi-Fi as the PC):
+
+```bash
+pnpm --filter @criczen/mobile start   # scan the QR code with the camera (iOS) or Expo Go (Android)
+```
+
 Other tasks:
 
 ```bash

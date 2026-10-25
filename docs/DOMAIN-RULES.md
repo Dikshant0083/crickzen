@@ -90,7 +90,7 @@ If the free-hit delivery is itself a wide or no-ball, the free hit **persists** 
 An innings closes on the first of:
 
 1. **overs complete** — `legalBalls === totalOvers * 6`
-2. **all out** — `wickets === battingXI.length - 1`, adjusted downward if players are absent or already retired out
+2. **all out** — `wickets === battingXI.length - 1`, adjusted downward if players are absent or already retired out; capped by `config.wicketsPerInnings` when set (a super over is all out at 2)
 3. **target reached** — chasing side passes the target (second innings only)
 4. **declared** — DEFERRED, Test only
 5. **abandoned** — interruption with no resumption

@@ -72,6 +72,7 @@ export const matchConfigSchema = z.object({
   ballType: z.enum(['leather', 'tennis']),
   totalOvers: z.number().int().min(0).max(450),
   playersPerSide: z.number().int().min(2).max(15),
+  wicketsPerInnings: z.number().int().min(1).max(14).optional(),
   teams: z.tuple([teamIdSchema, teamIdSchema]),
   powerplays: z.array(overRangeSchema).max(5),
   rules: matchRulesSchema,

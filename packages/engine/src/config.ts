@@ -57,6 +57,7 @@ export interface CreateConfigInput {
   /** Required for CUSTOM; otherwise overrides the format default. */
   totalOvers?: number;
   playersPerSide?: number;
+  wicketsPerInnings?: number;
   powerplays?: readonly OverRange[];
   rules?: Partial<MatchRules>;
 }
@@ -75,6 +76,9 @@ export function createMatchConfig(input: CreateConfigInput): MatchConfig {
     teams: input.teams,
     powerplays: input.powerplays ?? FORMAT_POWERPLAYS[input.format],
     rules: { ...base, ...input.rules },
+    ...(input.wicketsPerInnings === undefined
+      ? {}
+      : { wicketsPerInnings: input.wicketsPerInnings }),
   };
 }
 

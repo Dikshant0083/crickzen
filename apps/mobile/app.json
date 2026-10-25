@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "CrickScorer",
+    "slug": "crickscorer",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.criczen.scorer"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0F0D",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.criczen.scorer"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "crickscorer",
+    "plugins": [
+      "expo-router",
+      "expo-sqlite",
+      "expo-status-bar",
+      "expo-sharing",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#0B0F0D"
+        }
+      ],
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    },
+    "backgroundColor": "#0B0F0D"
+  }
+}

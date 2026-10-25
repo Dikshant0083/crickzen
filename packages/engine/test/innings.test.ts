@@ -242,3 +242,18 @@ describe('interruptions and revised targets (DOMAIN-RULES §9)', () => {
     expect(error.code).toBe('NOT_CHASING_INNINGS');
   });
 });
+
+describe('wicketsPerInnings (super over)', () => {
+  it('closes the innings at the cap and counts wickets left against it', () => {
+    const scorer = Scorer.live({ format: 'CUSTOM', totalOvers: 1, wicketsPerInnings: 2 });
+    scorer.runs(4).wicket('bowled', 'a1', { incoming: 'a3' }).wicket('bowled', 'a3');
+
+    const first = scorer.innings(0);
+    expect(first.closed).toBe(true);
+    expect(first.closeReason).toBe('all_out');
+
+    scorer.open(2, 'AUS', 'b1', 'b2', 'a1').runs(6);
+    const state = scorer.expectState();
+    expect(state.result?.description).toBe('AUS won by 2 wickets');
+  });
+});

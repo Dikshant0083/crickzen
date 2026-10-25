@@ -130,6 +130,8 @@ export interface MatchConfig {
   totalOvers: number;
   /** Players per side. Usually 11; local games vary. */
   playersPerSide: number;
+  /** Caps wickets per innings below XI - 1: a super over is all out at 2. */
+  wicketsPerInnings?: number;
   teams: readonly [TeamId, TeamId];
   powerplays: readonly OverRange[];
   rules: MatchRules;
