@@ -1,101 +1,313 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { loadAllMatches, type StoredMatch, useFocusLoad } from '../../db';
+import type { SQLiteDatabase } from 'expo-sqlite';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  listFixtures,
+  listPlayers,
+  listTournaments,
+  loadAllMatches,
+  type StoredMatch,
+  useFocusLoad,
+} from '../../db';
 import { oversText } from '../../match';
+import { initials, rankPlayers } from '../../people';
 import { C, radius } from '../../theme';
-import { Button, Empty, text } from '../../ui';
+import { type IconName, text } from '../../ui';
 
-export default function Matches() {
-  const [matches] = useFocusLoad(loadAllMatches);
+const load = async (db: SQLiteDatabase) => {
+  const [matches, players, tournaments] = await Promise.all([
+    loadAllMatches(db),
+    listPlayers(db),
+    listTournaments(db),
+  ]);
+  const cups = await Promise.all(
+    tournaments.slice(0, 3).map(async (t) => {
+      const fixtures = (await listFixtures(db, t.id)).filter((f) => f.away !== null);
+      const done = fixtures.filter((f) => {
+        const m = matches.find((x) => x.id === f.matchId);
+        return m !== undefined && (m.state.result !== null || m.state.status === 'abandoned');
+      }).length;
+      return { t, done, total: fixtures.length };
+    }),
+  );
+  return { matches, players, cups };
+};
+
+const isLive = (m: StoredMatch) => m.state.result === null && m.state.status !== 'abandoned';
+
+export default function Home() {
+  const [data] = useFocusLoad(load);
+  if (data === null) return null;
+
+  const live = data.matches.filter(isLive);
+  const recent = data.matches.filter((m) => !isLive(m)).slice(0, 3);
+  const states = data.matches.map((m) => m.state);
+  const top = rankPlayers(data.players, states).filter((p) => p.career.matches > 0);
+  const topBat = rankPlayers(data.players, states, 'batting')[0];
+  const topBowl = rankPlayers(data.players, states, 'bowling')[0];
+  const fresh = data.matches.length === 0 && data.players.length === 0;
 
   return (
-    <View style={styles.screen}>
-      <Button
-        label="Start a match"
-        icon="add-circle"
-        variant="primary"
-        size="lg"
-        onPress={() => router.push('/new')}
-      />
-      <FlatList
-        data={matches ?? []}
-        keyExtractor={(m) => m.id}
-        contentContainerStyle={styles.list}
-        ListEmptyComponent={
-          matches === null ? undefined : (
-            <Empty icon="baseball-outline" title="No matches yet" hint="Start one above." />
-          )
-        }
-        renderItem={({ item }) => (
-          <MatchCard
-            match={item}
-            onPress={() => router.push({ pathname: '/match/[id]', params: { id: item.id } })}
-          />
-        )}
-      />
-    </View>
+    <ScrollView contentContainerStyle={styles.screen}>
+      <View style={styles.actions}>
+        <Action icon="add-circle" label="Start match" primary onPress={() => router.push('/new')} />
+        <Action icon="trophy" label="Tournament" onPress={() => router.push('/tournament/new')} />
+        <Action
+          icon="shield"
+          label="New team"
+          onPress={() => router.push({ pathname: '/team/[id]', params: { id: 'new' } })}
+        />
+      </View>
+
+      {fresh && (
+        <View style={styles.welcome}>
+          <Ionicons name="baseball" size={40} color={C.accent} />
+          <Text style={text.h2}>Welcome to CrickScorer</Text>
+          <Text style={text.muted}>
+            Save your teams once, then score every ball. Scorecards, player stats and points tables
+            build themselves.
+          </Text>
+        </View>
+      )}
+
+      {live.length > 0 && (
+        <Section title="Live now">
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.hscroll}
+          >
+            {live.map((m) => (
+              <LiveCard key={m.id} match={m} />
+            ))}
+          </ScrollView>
+        </Section>
+      )}
+
+      {data.cups.length > 0 && (
+        <Section title="Tournaments" more={() => router.push('/tournaments')}>
+          {data.cups.map(({ t, done, total }) => (
+            <Pressable
+              key={t.id}
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/tournament/[id]', params: { id: t.id } })}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            >
+              <Ionicons name="trophy" size={26} color={C.extra} />
+              <View style={styles.flex}>
+                <Text style={styles.rowTitle}>{t.name}</Text>
+                <View style={styles.progressTrack}>
+                  <View
+                    style={[
+                      styles.progress,
+                      { width: `${total === 0 ? 0 : (done / total) * 100}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={text.muted}>
+                  {done}/{total} matches played · {t.teams.length} teams
+                </Text>
+              </View>
+            </Pressable>
+          ))}
+        </Section>
+      )}
+
+      {(topBat?.career.batting.runs ?? 0) > 0 && (
+        <Section title="Top performers" more={() => router.push('/players')}>
+          <View style={styles.leaders}>
+            {topBat !== undefined && (
+              <Leader
+                label="Most runs"
+                name={topBat.name}
+                value={`${topBat.career.batting.runs}`}
+                id={topBat.id}
+              />
+            )}
+            {topBowl !== undefined && topBowl.career.bowling.wickets > 0 && (
+              <Leader
+                label="Most wickets"
+                name={topBowl.name}
+                value={`${topBowl.career.bowling.wickets}`}
+                id={topBowl.id}
+              />
+            )}
+          </View>
+          {top.slice(0, 3).map((p, i) => (
+            <Pressable
+              key={p.id}
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/player/[id]', params: { id: p.id } })}
+              style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+            >
+              <Text style={styles.rank}>{i + 1}</Text>
+              <View style={styles.avatar}>
+                <Text style={styles.initials}>{initials(p.name)}</Text>
+              </View>
+              <Text style={[styles.rowTitle, styles.flex]}>{p.name}</Text>
+              <Text style={text.muted}>
+                {p.career.batting.runs} r · {p.career.bowling.wickets} w
+              </Text>
+            </Pressable>
+          ))}
+        </Section>
+      )}
+
+      {recent.length > 0 && (
+        <Section title="Recent results" more={() => router.push('/matches')}>
+          {recent.map((m) => (
+            <Pressable
+              key={m.id}
+              accessibilityRole="button"
+              onPress={() => router.push({ pathname: '/match/[id]', params: { id: m.id } })}
+              style={({ pressed }) => [styles.result, pressed && styles.pressed]}
+            >
+              <Text style={styles.rowTitle}>{m.state.config.teams.join(' vs ')}</Text>
+              <Text style={styles.resultText}>{m.state.result?.description ?? 'Abandoned'}</Text>
+            </Pressable>
+          ))}
+        </Section>
+      )}
+    </ScrollView>
   );
 }
 
-function MatchCard(props: { match: StoredMatch; onPress: () => void }) {
-  const { state, meta, createdAt } = props.match;
-  const live = state.result === null && state.status !== 'abandoned';
-  const [a, b] = state.config.teams;
-  const score = (team: string) => {
-    const inn = state.innings.find((i) => i.battingTeamId === team);
-    return inn === undefined ? '' : `${inn.runs}/${inn.wickets}  (${oversText(inn.legalBalls)})`;
-  };
-
+function Action(props: { icon: IconName; label: string; primary?: boolean; onPress: () => void }) {
+  const on = props.primary === true;
   return (
     <Pressable
       accessibilityRole="button"
       onPress={props.onPress}
-      style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}
+      style={({ pressed }) => [
+        styles.action,
+        on && styles.actionPrimary,
+        pressed && styles.pressed,
+      ]}
     >
-      <View style={styles.head}>
-        <Text style={text.muted}>
-          {meta.superOverOf !== undefined ? 'Super over · ' : ''}
-          {state.config.totalOvers} ov · {new Date(createdAt).toLocaleDateString()}
-        </Text>
-        {live && (
-          <View style={styles.live}>
-            <View style={styles.dot} />
-            <Text style={styles.liveText}>LIVE</Text>
-          </View>
+      <Ionicons name={props.icon} size={26} color={on ? C.onAccent : C.accent} />
+      <Text style={[styles.actionLabel, on && { color: C.onAccent }]}>{props.label}</Text>
+    </Pressable>
+  );
+}
+
+function Section(props: { title: string; more?: () => void; children: React.ReactNode }) {
+  return (
+    <View style={styles.section}>
+      <View style={styles.sectionHead}>
+        <Text style={text.label}>{props.title}</Text>
+        {props.more !== undefined && (
+          <Pressable accessibilityRole="button" onPress={props.more} hitSlop={8}>
+            <Text style={styles.more}>See all</Text>
+          </Pressable>
         )}
       </View>
-      {[a, b].map((team) => (
-        <View key={team} style={styles.teamRow}>
-          <Text style={styles.team} numberOfLines={1}>
-            {team}
+      {props.children}
+    </View>
+  );
+}
+
+function LiveCard(props: { match: StoredMatch }) {
+  const { state } = props.match;
+  const inn = state.innings.at(-1);
+  const target = inn?.target ?? null;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/match/[id]', params: { id: props.match.id } })}
+      style={({ pressed }) => [styles.live, pressed && styles.pressed]}
+    >
+      <View style={styles.liveHead}>
+        <View style={styles.dot} />
+        <Text style={styles.liveText}>LIVE</Text>
+      </View>
+      <Text style={styles.rowTitle} numberOfLines={1}>
+        {state.config.teams.join(' vs ')}
+      </Text>
+      {inn === undefined ? (
+        <Text style={text.muted}>Toss done · not started</Text>
+      ) : (
+        <>
+          <Text style={styles.liveScore}>
+            {inn.runs}/{inn.wickets}
+            <Text style={text.muted}> ({oversText(inn.legalBalls)})</Text>
           </Text>
-          <Text style={styles.score}>{score(team)}</Text>
-        </View>
-      ))}
-      <Text style={[styles.result, live && { color: C.muted }]}>
-        {state.result?.description ?? (state.status === 'abandoned' ? 'Abandoned' : 'In progress')}
+          <Text style={text.muted} numberOfLines={1}>
+            {inn.battingTeamId}
+            {target !== null && !inn.closed
+              ? ` need ${Math.max(0, target - inn.runs)}`
+              : ' batting'}
+          </Text>
+        </>
+      )}
+    </Pressable>
+  );
+}
+
+function Leader(props: { label: string; name: string; value: string; id: string }) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => router.push({ pathname: '/player/[id]', params: { id: props.id } })}
+      style={({ pressed }) => [styles.leader, pressed && styles.pressed]}
+    >
+      <Text style={text.muted}>{props.label}</Text>
+      <Text style={styles.leaderValue}>{props.value}</Text>
+      <Text style={styles.rowTitle} numberOfLines={1}>
+        {props.name}
       </Text>
     </Pressable>
   );
 }
 
+const card = {
+  backgroundColor: C.surface,
+  borderRadius: radius.lg,
+  borderWidth: 1,
+  borderColor: C.border,
+} as const;
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, padding: 16, gap: 16 },
-  list: { gap: 12, paddingBottom: 32 },
-  card: {
-    backgroundColor: C.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 16,
-    gap: 8,
-  },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  live: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  screen: { padding: 16, gap: 22, paddingBottom: 48 },
+  flex: { flex: 1 },
+  pressed: { opacity: 0.75 },
+  actions: { flexDirection: 'row', gap: 10 },
+  action: { ...card, flex: 1, alignItems: 'center', gap: 6, paddingVertical: 16 },
+  actionPrimary: { backgroundColor: C.accent, borderColor: C.accent },
+  actionLabel: { color: C.text, fontWeight: '800', fontSize: 13 },
+  welcome: { ...card, padding: 20, gap: 8, alignItems: 'flex-start' },
+  section: { gap: 10 },
+  sectionHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  more: { color: C.accent, fontWeight: '700' },
+  hscroll: { gap: 10 },
+  live: { ...card, width: 220, padding: 14, gap: 4 },
+  liveHead: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.wicket },
-  liveText: { color: C.wicket, fontWeight: '800', fontSize: 12, letterSpacing: 1 },
-  teamRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  team: { color: C.text, fontSize: 18, fontWeight: '700', flexShrink: 1 },
-  score: { color: C.text, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  result: { color: C.accent, fontWeight: '700', marginTop: 4 },
+  liveText: { color: C.wicket, fontWeight: '900', fontSize: 12, letterSpacing: 1 },
+  liveScore: { color: C.text, fontSize: 26, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  row: { ...card, flexDirection: 'row', alignItems: 'center', gap: 12, padding: 12 },
+  rowTitle: { color: C.text, fontSize: 16, fontWeight: '700' },
+  progressTrack: {
+    height: 6,
+    backgroundColor: C.raised,
+    borderRadius: 3,
+    marginVertical: 6,
+    overflow: 'hidden',
+  },
+  progress: { height: 6, backgroundColor: C.accent },
+  leaders: { flexDirection: 'row', gap: 10 },
+  leader: { ...card, flex: 1, padding: 14, gap: 2 },
+  leaderValue: { color: C.accent, fontSize: 30, fontWeight: '900' },
+  rank: { color: C.faint, fontWeight: '900', width: 16 },
+  avatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: C.raised,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  initials: { color: C.accent, fontWeight: '800' },
+  result: { ...card, padding: 14, gap: 4 },
+  resultText: { color: C.accent, fontWeight: '700' },
 });

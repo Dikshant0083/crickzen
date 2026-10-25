@@ -1,5 +1,6 @@
+import type { MatchState } from '@criczen/engine';
 import type { Player, Role } from './db';
-import { normalizeMobile } from './stats';
+import { type Career, careerStats, impact, normalizeMobile } from './stats';
 import type { IconName } from './ui';
 
 export const ROLE: Record<Role, { label: string; icon: IconName }> = {
@@ -33,4 +34,28 @@ export function initials(name: string): string {
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase())
     .join('');
+}
+
+export type RankBy = 'overall' | 'batting' | 'bowling';
+
+export interface RankedPlayer extends Player {
+  career: Career;
+}
+
+/** Best performers first; players with no matches yet go last, by name. */
+export function rankPlayers(
+  players: readonly Player[],
+  states: readonly MatchState[],
+  by: RankBy = 'overall',
+): RankedPlayer[] {
+  const key = (c: Career) =>
+    by === 'batting' ? c.batting.runs : by === 'bowling' ? c.bowling.wickets : impact(c);
+  return players
+    .map((p) => ({ ...p, career: careerStats(states, p.id) }))
+    .sort(
+      (a, b) =>
+        key(b.career) - key(a.career) ||
+        b.career.matches - a.career.matches ||
+        a.name.localeCompare(b.name),
+    );
 }

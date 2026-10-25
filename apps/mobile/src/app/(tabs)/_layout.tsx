@@ -26,7 +26,8 @@ export default function TabsLayout() {
         sceneStyle: { backgroundColor: C.bg },
       }}
     >
-      <Tabs.Screen name="index" options={tab('Matches', 'baseball')} />
+      <Tabs.Screen name="index" options={{ ...tab('Home', 'home'), headerTitle: 'CrickScorer' }} />
+      <Tabs.Screen name="matches" options={tab('Matches', 'baseball')} />
       <Tabs.Screen name="players" options={tab('Players', 'people')} />
       <Tabs.Screen name="tournaments" options={tab('Cups', 'trophy')} />
       <Tabs.Screen name="teams" options={tab('Teams', 'shield')} />

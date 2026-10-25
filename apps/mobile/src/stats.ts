@@ -137,6 +137,12 @@ export function careerStats(states: readonly MatchState[], playerId: PlayerId): 
   return { matches, batting, bowling, fielding };
 }
 
+/** One number for "how much did they contribute": runs, 20 a wicket, 10 a dismissal in the field. */
+export function impact(c: Career): number {
+  const f = c.fielding;
+  return c.batting.runs + 20 * c.bowling.wickets + 10 * (f.catches + f.stumpings + f.runOuts);
+}
+
 export function average(runs: number, outs: number): string {
   return outs === 0 ? '-' : (runs / outs).toFixed(2);
 }

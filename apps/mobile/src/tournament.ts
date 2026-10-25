@@ -6,7 +6,7 @@ import {
   type StandingsRow,
   standings,
 } from '@criczen/engine';
-import { careerStats } from './stats';
+import { careerStats, impact } from './stats';
 
 export type Format = 'league' | 'knockout';
 export type Playoffs = 'none' | 'final' | 'semis';
@@ -244,10 +244,7 @@ export function suggestPlayerOfMatch(state: MatchState): PlayerId | null {
   let bestScore = -1;
   for (const squad of Object.values(state.squads)) {
     for (const id of squad.playingXI) {
-      const c = careerStats([state], id);
-      const f = c.fielding;
-      const score =
-        c.batting.runs + 20 * c.bowling.wickets + 10 * (f.catches + f.stumpings + f.runOuts);
+      const score = impact(careerStats([state], id));
       if (score > bestScore) {
         best = id;
         bestScore = score;
