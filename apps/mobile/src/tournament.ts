@@ -236,15 +236,19 @@ export function leaders(
 }
 
 /**
- * A starting suggestion for Player of the Match: runs, plus 20 per wicket
- * and 10 per catch, stumping or run out. The scorer can pick someone else.
+ * Player of the Match, decided by the scorecard alone and never edited:
+ * runs, plus 20 per wicket and 10 per catch, stumping or run out. Level
+ * scores go to the winning side. Null until the match has a result.
  */
-export function suggestPlayerOfMatch(state: MatchState): PlayerId | null {
+export function playerOfMatch(state: MatchState): PlayerId | null {
+  if (state.result === null) return null;
+  const winner = state.result.winnerTeamId;
   let best: PlayerId | null = null;
   let bestScore = -1;
   for (const squad of Object.values(state.squads)) {
     for (const id of squad.playingXI) {
-      const score = impact(careerStats([state], id));
+      // Half a point can only break a tie: impact is always a whole number.
+      const score = impact(careerStats([state], id)) + (squad.teamId === winner ? 0.5 : 0);
       if (score > bestScore) {
         best = id;
         bestScore = score;

@@ -6,6 +6,7 @@ import {
   firstFixtures,
   nextStep,
   type Played,
+  playerOfMatch,
   pointsTable,
   type Tournament,
 } from '../src/tournament';
@@ -182,5 +183,29 @@ describe('knockout', () => {
     expect(final.kind === 'create' && final.fixtures).toEqual([
       { stage: 'final', round: 2, home: 'A', away: 'C' },
     ]);
+  });
+});
+
+describe('playerOfMatch', () => {
+  it('goes to the best impact once there is a result', () => {
+    const won = play('A', 'B', 6, 4); // A1 hit 6, B1 hit 4
+    expect(playerOfMatch(won)).toBe('A1');
+    expect(playerOfMatch({ ...won, result: null })).toBeNull();
+  });
+
+  it('breaks a level score in favour of the winning side', () => {
+    const level = play('A', 'B', 4, 4); // A1 and B1 both hit 4
+    const winBy = (team: string) => ({
+      ...level,
+      result: {
+        kind: 'won_by_runs' as const,
+        winnerTeamId: team,
+        margin: 1,
+        marginUnit: 'runs' as const,
+        description: '',
+      },
+    });
+    expect(playerOfMatch(winBy('A'))).toBe('A1');
+    expect(playerOfMatch(winBy('B'))).toBe('B1');
   });
 });

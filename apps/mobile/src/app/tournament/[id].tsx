@@ -21,6 +21,7 @@ import {
   leaders,
   nextStep,
   type Played,
+  playerOfMatch,
   pointsTable,
   stageLabel,
 } from '../../tournament';
@@ -271,7 +272,10 @@ function Leaders(props: { matches: readonly StoredMatch[] }) {
   );
   const name = (pid: string) => names[pid] ?? pid;
   const top = leaders(props.matches.map((m) => m.state));
-  const awards = props.matches.filter((m) => m.meta.playerOfMatch !== undefined);
+  const awards = props.matches.flatMap((m) => {
+    const id = playerOfMatch(m.state);
+    return id === null ? [] : [{ match: m, id }];
+  });
 
   const list = (title: string, unit: string, rows: ReturnType<typeof leaders>['runs']) => (
     <Card title={title}>
@@ -298,13 +302,13 @@ function Leaders(props: { matches: readonly StoredMatch[] }) {
       {list('Most wickets', 'wkts', top.wickets)}
       <Card title="Players of the match">
         {awards.length === 0 && (
-          <Text style={text.muted}>Pick one from a finished match's Live tab.</Text>
+          <Text style={text.muted}>Awarded automatically when a match finishes.</Text>
         )}
-        {awards.map((m) => (
-          <View key={m.id} style={styles.leader}>
+        {awards.map(({ match, id }) => (
+          <View key={match.id} style={styles.leader}>
             <Ionicons name="star" size={18} color={C.extra} />
-            <Text style={[styles.teams, { flex: 1 }]}>{name(m.meta.playerOfMatch ?? '')}</Text>
-            <Text style={text.muted}>{m.state.config.teams.join(' v ')}</Text>
+            <Text style={[styles.teams, { flex: 1 }]}>{name(id)}</Text>
+            <Text style={text.muted}>{match.state.config.teams.join(' v ')}</Text>
           </View>
         ))}
       </Card>

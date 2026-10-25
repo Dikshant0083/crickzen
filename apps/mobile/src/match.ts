@@ -17,7 +17,6 @@ export interface MatchMeta {
   names: Record<PlayerId, string>;
   /** Set on a super over: the tied match it decides. */
   superOverOf?: string;
-  playerOfMatch?: PlayerId;
 }
 
 export interface Squad {

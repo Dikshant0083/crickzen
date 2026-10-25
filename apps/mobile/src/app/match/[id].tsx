@@ -44,16 +44,17 @@ import {
   OpenInnings,
   Pad,
 } from '../../scoring';
+import { careerStats } from '../../stats';
 import { C, radius } from '../../theme';
-import { suggestPlayerOfMatch } from '../../tournament';
-import { BallDot, Button, Card, Choice, Empty, Segmented, text } from '../../ui';
+import { playerOfMatch } from '../../tournament';
+import { BallDot, Button, Card, Empty, Segmented, text } from '../../ui';
 
 type Tab = 'live' | 'card' | 'balls' | 'charts';
 
 export default function MatchScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const db = useSQLiteContext();
-  const { match, error, append: save, setMeta } = useMatch(db, id);
+  const { match, error, append: save } = useMatch(db, id);
   const [tab, setTab] = useState<Tab>('live');
 
   if (error !== null) return <Text style={[styles.pad, { color: C.wicket }]}>{error}</Text>;
@@ -103,15 +104,7 @@ export default function MatchScreen() {
       </View>
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {tab === 'live' && (
-          <Live
-            matchId={id}
-            state={state}
-            meta={meta}
-            name={name}
-            append={append}
-            onUndo={undo}
-            setMeta={setMeta}
-          />
+          <Live matchId={id} state={state} meta={meta} name={name} append={append} onUndo={undo} />
         )}
         {tab === 'card' && <Scorecard state={state} name={name} />}
         {tab === 'balls' && <Balls state={state} name={name} append={append} />}
@@ -142,7 +135,6 @@ function Live(props: {
   name: Name;
   append: Append;
   onUndo: () => void;
-  setMeta: (meta: MatchMeta) => Promise<void>;
 }) {
   const { state, name, append } = props;
   const db = useSQLiteContext();
@@ -177,14 +169,7 @@ function Live(props: {
               onPress={playSuperOver}
             />
           )}
-          {state.result !== null && (
-            <PlayerOfMatch
-              state={state}
-              chosen={props.meta.playerOfMatch ?? null}
-              name={name}
-              onChoose={(playerOfMatch) => props.setMeta({ ...props.meta, playerOfMatch })}
-            />
-          )}
+          {state.result !== null && <PlayerOfMatch state={state} name={name} />}
         </Card>
       ) : state.status === 'toss_done' || state.status === 'innings_break' ? (
         <OpenInnings state={state} name={name} append={append} />
@@ -211,46 +196,21 @@ function Live(props: {
   );
 }
 
-function PlayerOfMatch(props: {
-  state: MatchState;
-  chosen: string | null;
-  name: Name;
-  onChoose: (id: string) => void;
-}) {
-  const [picking, setPicking] = useState(false);
-  const suggested = suggestPlayerOfMatch(props.state);
-  const everyone = Object.values(props.state.squads).flatMap((s) => s.playingXI);
+function PlayerOfMatch(props: { state: MatchState; name: Name }) {
+  const id = playerOfMatch(props.state);
+  if (id === null) return null;
+  const c = careerStats([props.state], id);
+  const line = [
+    c.batting.innings > 0 ? `${c.batting.runs} (${c.batting.balls})` : null,
+    c.bowling.wickets > 0 ? `${c.bowling.wickets}/${c.bowling.runs}` : null,
+  ]
+    .filter((x) => x !== null)
+    .join('  ·  ');
   return (
     <View style={styles.potm}>
       <Text style={text.label}>Player of the match</Text>
-      {props.chosen !== null && !picking ? (
-        <Pressable
-          accessibilityRole="button"
-          accessibilityHint="Change"
-          onPress={() => setPicking(true)}
-        >
-          <Text style={styles.potmName}>⭐ {props.name(props.chosen)}</Text>
-        </Pressable>
-      ) : (
-        <>
-          {suggested !== null && props.chosen === null && (
-            <Button
-              label={`Award to ${props.name(suggested)}`}
-              icon="star"
-              variant="primary"
-              onPress={() => props.onChoose(suggested)}
-            />
-          )}
-          <Choice
-            options={everyone.map((p) => ({ value: p, label: props.name(p) }))}
-            value={props.chosen}
-            onChange={(p) => {
-              props.onChoose(p);
-              setPicking(false);
-            }}
-          />
-        </>
-      )}
+      <Text style={styles.potmName}>⭐ {props.name(id)}</Text>
+      {line !== '' && <Text style={text.muted}>{line}</Text>}
     </View>
   );
 }

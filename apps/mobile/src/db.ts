@@ -266,18 +266,7 @@ export function useMatch(db: SQLiteDatabase, matchId: string) {
     [db, matchId, setMatch],
   );
 
-  /** Display-only data such as Player of the Match; not part of the event log. */
-  const setMeta = useCallback(
-    async (meta: MatchMeta) => {
-      const current = latest.current;
-      if (current === null) return;
-      await setMatchMeta(db, matchId, meta);
-      setMatch({ ...current, meta });
-    },
-    [db, matchId, setMatch],
-  );
-
-  return { match, error, append, setMeta };
+  return { match, error, append };
 }
 
 /** Loads on every focus, so lists are fresh after editing on another screen. */
@@ -289,10 +278,6 @@ export function useFocusLoad<T>(load: (db: SQLiteDatabase) => Promise<T>): [T | 
   }, [db, load]);
   useFocusEffect(reload);
   return [data, reload];
-}
-
-export async function setMatchMeta(db: SQLiteDatabase, matchId: string, meta: MatchMeta) {
-  await db.runAsync('UPDATE matches SET meta = ? WHERE id = ?', JSON.stringify(meta), matchId);
 }
 
 export async function listTournaments(db: SQLiteDatabase): Promise<Tournament[]> {

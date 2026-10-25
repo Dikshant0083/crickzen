@@ -1,18 +1,9 @@
 import { demoMobile, DEMO_TEAMS as TEAMS } from '@criczen/shared';
 import type { SQLiteDatabase } from 'expo-sqlite';
-import {
-  createMatch,
-  createTournament,
-  loadAllMatches,
-  type Player,
-  type Role,
-  savePlayer,
-  saveTeam,
-  setMatchMeta,
-} from './db';
+import { createMatch, createTournament, type Player, type Role, savePlayer, saveTeam } from './db';
 import { setupPayloads } from './match';
 import { rng, simulate } from './simulate';
-import { type Fixture, firstFixtures, suggestPlayerOfMatch, type Tournament } from './tournament';
+import { type Fixture, firstFixtures, type Tournament } from './tournament';
 
 /** Position in the XI decides the role: openers bat, the last five bowl. */
 function roleFor(i: number): Role {
@@ -119,12 +110,6 @@ export async function loadDemoData(db: SQLiteDatabase): Promise<string | null> {
   }
   await createTournament(db, t, fixtures);
 
-  // Award Player of the Match on the finished games.
-  for (const m of await loadAllMatches(db)) {
-    const best = m.id.startsWith('demo-') ? suggestPlayerOfMatch(m.state) : null;
-    if (best !== null && m.state.result !== null)
-      await setMatchMeta(db, m.id, { ...m.meta, playerOfMatch: best });
-  }
   return null;
 }
 
