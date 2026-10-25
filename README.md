@@ -41,6 +41,15 @@ same Wi-Fi as the PC):
 pnpm --filter @criczen/mobile start   # scan the QR code with the camera (iOS) or Expo Go (Android)
 ```
 
+Run the API (accounts; Phase 2) on your PC:
+
+```bash
+cp apps/api/.env.example apps/api/.env      # then set JWT_SECRET to 32+ random characters
+pnpm --filter @criczen/api dev              # http://localhost:4000, data in apps/api/data (PGlite)
+```
+
+Set `DATABASE_URL` to a Postgres/Neon URL to use a real database instead of the embedded one.
+
 Other tasks:
 
 ```bash

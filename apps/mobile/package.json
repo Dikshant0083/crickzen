@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@criczen/engine": "workspace:*",
+    "@criczen/shared": "workspace:*",
     "@expo/vector-icons": "^15.1.1",
     "expo": "~58.0.19",
     "expo-constants": "~58.0.13",
