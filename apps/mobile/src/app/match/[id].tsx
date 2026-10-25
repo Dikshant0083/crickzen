@@ -7,8 +7,10 @@ import {
   squadOf,
   voidLastDelivery,
 } from '@criczen/engine';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { randomUUID } from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -47,7 +49,17 @@ import {
 import { careerStats } from '../../stats';
 import { C, radius } from '../../theme';
 import { playerOfMatch } from '../../tournament';
-import { BallDot, Button, Card, Empty, Segmented, text } from '../../ui';
+import {
+  BallDot,
+  Button,
+  Card,
+  Celebration,
+  Empty,
+  Segmented,
+  TeamBadge,
+  teamColor,
+  text,
+} from '../../ui';
 
 type Tab = 'live' | 'card' | 'balls' | 'charts';
 
@@ -56,6 +68,7 @@ export default function MatchScreen() {
   const db = useSQLiteContext();
   const { match, error, append: save } = useMatch(db, id);
   const [tab, setTab] = useState<Tab>('live');
+  const [cheer, setCheer] = useState({ id: 0, label: '', color: '' });
 
   if (error !== null) return <Text style={[styles.pad, { color: C.wicket }]}>{error}</Text>;
   if (match === null) return <ActivityIndicator style={styles.pad} color={C.accent} />;
@@ -71,7 +84,21 @@ export default function MatchScreen() {
       Alert.alert('Not allowed', refused);
       return false;
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    const d = payload.kind === 'delivery.recorded' ? payload.delivery : null;
+    const big =
+      d === null
+        ? null
+        : d.wicket !== undefined
+          ? { label: 'WICKET!', color: C.wicket }
+          : d.runsOffBat === 6
+            ? { label: 'SIX!', color: C.six }
+            : d.runsOffBat === 4
+              ? { label: 'FOUR!', color: C.four }
+              : null;
+    if (big !== null) setCheer((c) => ({ id: c.id + 1, ...big }));
+    Haptics.impactAsync(
+      big === null ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Heavy,
+    );
     return true;
   };
 
@@ -120,6 +147,7 @@ export default function MatchScreen() {
             </>
           ))}
       </ScrollView>
+      <Celebration {...cheer} />
     </View>
   );
 }
@@ -209,8 +237,18 @@ function PlayerOfMatch(props: { state: MatchState; name: Name }) {
   return (
     <View style={styles.potm}>
       <Text style={text.label}>Player of the match</Text>
-      <Text style={styles.potmName}>⭐ {props.name(id)}</Text>
-      {line !== '' && <Text style={text.muted}>{line}</Text>}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityHint="Opens the player's profile and stats"
+        onPress={() => router.push({ pathname: '/player/[id]', params: { id } })}
+        style={({ pressed }) => [styles.potmRow, pressed && { opacity: 0.7 }]}
+      >
+        <View style={styles.flex}>
+          <Text style={styles.potmName}>⭐ {props.name(id)}</Text>
+          {line !== '' && <Text style={text.muted}>{line}</Text>}
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={C.faint} />
+      </Pressable>
     </View>
   );
 }
@@ -223,9 +261,17 @@ function Hero(props: { state: MatchState; innings: InningsState }) {
   const thisOver = innings.balls.filter((b) => b.overNo === lastOver);
 
   return (
-    <View style={styles.hero}>
+    <LinearGradient
+      colors={[`${teamColor(innings.battingTeamId)}40`, C.surface]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={styles.hero}
+    >
       <View style={styles.heroTop}>
-        <Text style={styles.team}>{innings.battingTeamId}</Text>
+        <View style={styles.heroTeam}>
+          <TeamBadge name={innings.battingTeamId} size={30} />
+          <Text style={styles.team}>{innings.battingTeamId}</Text>
+        </View>
         {inputs.freeHit && <Text style={styles.freeHit}>FREE HIT</Text>}
       </View>
       <Text style={styles.score} accessibilityRole="header">
@@ -255,7 +301,7 @@ function Hero(props: { state: MatchState; innings: InningsState }) {
           ))}
         </View>
       )}
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -465,6 +511,7 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 6,
   },
+  heroTeam: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   team: {
     color: C.muted,
@@ -497,6 +544,7 @@ const styles = StyleSheet.create({
   shareRow: { flexDirection: 'row', gap: 8 },
   shot: { gap: 14, backgroundColor: C.bg, paddingVertical: 4 },
   overRuns: { color: C.text, fontWeight: '800' },
+  potmRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   potm: { gap: 8, borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12 },
   potmName: { color: C.extra, fontSize: 18, fontWeight: '800' },
   ballRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 4 },

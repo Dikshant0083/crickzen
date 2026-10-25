@@ -1,4 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -13,7 +14,7 @@ import {
 import { oversText } from '../../match';
 import { initials, rankPlayers } from '../../people';
 import { C, radius } from '../../theme';
-import { type IconName, text } from '../../ui';
+import { type IconName, TeamBadge, text } from '../../ui';
 
 const load = async (db: SQLiteDatabase) => {
   const [matches, players, tournaments] = await Promise.all([
@@ -50,9 +51,26 @@ export default function Home() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <LinearGradient
+        colors={[`${C.accent}55`, C.surface]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.banner}
+      >
+        <Text style={styles.bannerTitle}>Game day?</Text>
+        <Text style={text.muted}>Score every ball, and the stats build themselves.</Text>
+        <Pressable
+          accessibilityRole="button"
+          onPress={() => router.push('/new')}
+          style={({ pressed }) => [styles.bannerButton, pressed && styles.pressed]}
+        >
+          <Ionicons name="play" size={18} color={C.onAccent} />
+          <Text style={styles.bannerButtonText}>Start a match</Text>
+        </Pressable>
+      </LinearGradient>
       <View style={styles.actions}>
-        <Action icon="add-circle" label="Start match" primary onPress={() => router.push('/new')} />
         <Action icon="trophy" label="Tournament" onPress={() => router.push('/tournament/new')} />
+        <Action icon="people" label="Players" onPress={() => router.push('/players')} />
         <Action
           icon="shield"
           label="New team"
@@ -221,9 +239,14 @@ function LiveCard(props: { match: StoredMatch }) {
         <View style={styles.dot} />
         <Text style={styles.liveText}>LIVE</Text>
       </View>
-      <Text style={styles.rowTitle} numberOfLines={1}>
-        {state.config.teams.join(' vs ')}
-      </Text>
+      <View style={styles.liveTeams}>
+        {state.config.teams.map((t) => (
+          <TeamBadge key={t} name={t} size={26} />
+        ))}
+        <Text style={[styles.rowTitle, styles.flex]} numberOfLines={1}>
+          {state.config.teams.join(' vs ')}
+        </Text>
+      </View>
       {inn === undefined ? (
         <Text style={text.muted}>Toss done · not started</Text>
       ) : (
@@ -271,6 +294,21 @@ const styles = StyleSheet.create({
   screen: { padding: 16, gap: 22, paddingBottom: 48 },
   flex: { flex: 1 },
   pressed: { opacity: 0.75 },
+  banner: { borderRadius: radius.lg, borderWidth: 1, borderColor: C.border, padding: 20, gap: 6 },
+  bannerTitle: { color: C.text, fontSize: 26, fontWeight: '900' },
+  bannerButton: {
+    marginTop: 10,
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: C.accent,
+    borderRadius: 999,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+  },
+  bannerButtonText: { color: C.onAccent, fontWeight: '900', fontSize: 16 },
+  liveTeams: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   actions: { flexDirection: 'row', gap: 10 },
   action: { ...card, flex: 1, alignItems: 'center', gap: 6, paddingVertical: 16 },
   actionPrimary: { backgroundColor: C.accent, borderColor: C.accent },

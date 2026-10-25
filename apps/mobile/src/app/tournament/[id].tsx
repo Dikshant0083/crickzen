@@ -25,7 +25,7 @@ import {
   pointsTable,
   stageLabel,
 } from '../../tournament';
-import { Button, Card, Empty, Segmented, text } from '../../ui';
+import { Button, Card, Empty, Segmented, TeamBadge, text } from '../../ui';
 
 type Tab = 'fixtures' | 'table' | 'leaders';
 
@@ -206,8 +206,13 @@ function FixtureRow(props: {
     >
       {[f.home, f.away].map((team) => (
         <View key={team} style={styles.teamRow}>
+          <TeamBadge name={team} size={24} />
           <Text
-            style={[styles.teams, winner !== null && winner !== team && { color: C.muted }]}
+            style={[
+              styles.teams,
+              styles.flex,
+              winner !== null && winner !== team && { color: C.muted },
+            ]}
             numberOfLines={1}
           >
             {team}
@@ -334,7 +339,8 @@ const styles = StyleSheet.create({
   },
   championName: { color: C.onAccent, fontSize: 24, fontWeight: '900' },
   fixture: { gap: 4, paddingVertical: 10, borderTopWidth: 1, borderTopColor: C.border },
-  teamRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 8 },
+  teamRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  flex: { flex: 1 },
   teams: { color: C.text, fontSize: 16, fontWeight: '700', flexShrink: 1 },
   score: { color: C.text, fontWeight: '800', fontVariant: ['tabular-nums'] },
   tr: {

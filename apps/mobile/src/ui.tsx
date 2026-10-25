@@ -1,7 +1,8 @@
 import type { BallRecord } from '@criczen/engine';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps, ReactNode } from 'react';
+import { type ComponentProps, type ReactNode, useEffect, useRef } from 'react';
 import {
+  Animated,
   type KeyboardTypeOptions,
   Modal,
   Pressable,
@@ -14,6 +15,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ballLabel } from './match';
+import { initials } from './people';
 import { C, radius } from './theme';
 
 export type IconName = ComponentProps<typeof Ionicons>['name'];
@@ -250,6 +252,82 @@ export function Sheet(props: {
   );
 }
 
+const TEAM_COLORS = [
+  '#2EE67A',
+  '#3DA5FF',
+  '#B46CFF',
+  '#FF8A3D',
+  '#FF4D8D',
+  '#22D3EE',
+  '#FACC15',
+  '#A3E635',
+];
+
+/** A stable colour per team name, so a side looks the same on every screen. */
+export function teamColor(name: string): string {
+  let h = 0;
+  for (const ch of name.toLowerCase()) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return TEAM_COLORS[h % TEAM_COLORS.length] ?? C.accent;
+}
+
+export function TeamBadge(props: { name: string; size?: number }) {
+  const size = props.size ?? 36;
+  return (
+    <View
+      accessibilityElementsHidden
+      importantForAccessibility="no"
+      style={[
+        styles.badge,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: teamColor(props.name),
+        },
+      ]}
+    >
+      <Text style={[styles.badgeText, { fontSize: size * 0.38 }]}>{initials(props.name)}</Text>
+    </View>
+  );
+}
+
+/**
+ * A big word that pops and fades over the screen: FOUR!, SIX!, WICKET!.
+ * A new `id` replays it; touches pass through.
+ */
+export function Celebration(props: { id: number; label: string; color: string }) {
+  const anim = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (props.id === 0) return;
+    anim.setValue(0);
+    Animated.sequence([
+      Animated.spring(anim, { toValue: 1, useNativeDriver: true, friction: 5 }),
+      Animated.delay(500),
+      Animated.timing(anim, { toValue: 2, duration: 250, useNativeDriver: true }),
+    ]).start();
+  }, [props.id, anim]);
+  if (props.id === 0) return null;
+  return (
+    <View pointerEvents="none" style={styles.celebrateWrap}>
+      <Animated.Text
+        accessibilityLiveRegion="polite"
+        style={[
+          styles.celebrate,
+          {
+            color: props.color,
+            opacity: anim.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 1, 0] }),
+            transform: [
+              { scale: anim.interpolate({ inputRange: [0, 1, 2], outputRange: [0.4, 1, 1.3] }) },
+            ],
+          },
+        ]}
+      >
+        {props.label}
+      </Animated.Text>
+    </View>
+  );
+}
+
 export const text = StyleSheet.create({
   h1: { color: C.text, fontSize: 28, fontWeight: '800' },
   h2: { color: C.text, fontSize: 20, fontWeight: '700' },
@@ -265,6 +343,24 @@ export const text = StyleSheet.create({
 });
 
 const styles = StyleSheet.create({
+  badge: { alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#04140A', fontWeight: '900' },
+  celebrateWrap: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  celebrate: {
+    fontSize: 64,
+    fontWeight: '900',
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0,0,0,0.6)',
+    textShadowRadius: 12,
+  },
   button: {
     minHeight: 46,
     paddingHorizontal: 16,

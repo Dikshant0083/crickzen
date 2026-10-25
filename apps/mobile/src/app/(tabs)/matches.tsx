@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { loadAllMatches, type StoredMatch, useFocusLoad } from '../../db';
 import { oversText } from '../../match';
 import { C, radius } from '../../theme';
-import { Button, Empty, text } from '../../ui';
+import { Button, Empty, TeamBadge, text } from '../../ui';
 
 export default function Matches() {
   const [matches] = useFocusLoad(loadAllMatches);
@@ -66,6 +66,7 @@ function MatchCard(props: { match: StoredMatch; onPress: () => void }) {
       </View>
       {[a, b].map((team) => (
         <View key={team} style={styles.teamRow}>
+          <TeamBadge name={team} size={28} />
           <Text style={styles.team} numberOfLines={1}>
             {team}
           </Text>
@@ -94,8 +95,8 @@ const styles = StyleSheet.create({
   live: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.wicket },
   liveText: { color: C.wicket, fontWeight: '800', fontSize: 12, letterSpacing: 1 },
-  teamRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 12 },
-  team: { color: C.text, fontSize: 18, fontWeight: '700', flexShrink: 1 },
+  teamRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  team: { flex: 1, color: C.text, fontSize: 18, fontWeight: '700' },
   score: { color: C.text, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
   result: { color: C.accent, fontWeight: '700', marginTop: 4 },
 });
