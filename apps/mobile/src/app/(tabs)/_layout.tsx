@@ -31,6 +31,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="players" options={tab('Players', 'people')} />
       <Tabs.Screen name="tournaments" options={tab('Cups', 'trophy')} />
       <Tabs.Screen name="teams" options={tab('Teams', 'shield')} />
+      <Tabs.Screen name="me" options={tab('Me', 'person-circle')} />
     </Tabs>
   );
 }

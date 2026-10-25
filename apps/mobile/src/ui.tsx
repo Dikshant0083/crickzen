@@ -151,6 +151,10 @@ export function Field(props: {
   keyboardType?: KeyboardTypeOptions;
   hint?: string;
   autoFocus?: boolean;
+  /** Passwords: hidden, no autocorrect, offered to the password manager. */
+  secure?: boolean;
+  /** Usernames and numbers: no auto-capitalising. */
+  plain?: boolean;
 }) {
   return (
     <View style={styles.field}>
@@ -163,6 +167,10 @@ export function Field(props: {
         placeholderTextColor={C.faint}
         keyboardType={props.keyboardType}
         autoFocus={props.autoFocus}
+        secureTextEntry={props.secure}
+        autoCapitalize={props.secure === true || props.plain === true ? 'none' : 'sentences'}
+        autoCorrect={props.secure !== true && props.plain !== true}
+        textContentType={props.secure === true ? 'password' : undefined}
         style={styles.input}
       />
       {props.hint !== undefined && <Text style={styles.hint}>{props.hint}</Text>}
