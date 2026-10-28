@@ -1,0 +1,19 @@
+# Render Blueprint: the accounts API on Render's free plan, next to Neon in Singapore.
+services:
+  - type: web
+    name: crickscorer-api
+    runtime: node
+    plan: free
+    region: singapore
+    buildCommand: corepack enable && pnpm install --frozen-lockfile
+    startCommand: npm --prefix apps/api start
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # Neon's pooled (-pooler) connection string; asked for once when the Blueprint is created.
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true

@@ -15,3 +15,10 @@ const app = await buildApp({ db, jwtSecret: new TextEncoder().encode(secret), lo
 app.addHook('onClose', close);
 
 await app.listen({ port: Number(process.env['PORT'] ?? 4000), host: '0.0.0.0' });
+
+// Render's free plan sleeps after 15 idle minutes; a ping through the public URL counts as traffic.
+// shortcut: uses ~744 of the 750 free hours a month, so only one always-on free service; drop it when on a paid plan.
+const self = process.env['RENDER_EXTERNAL_URL'];
+if (self !== undefined) {
+  setInterval(() => fetch(`${self}/health`).catch(() => {}), 14 * 60_000);
+}

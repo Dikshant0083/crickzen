@@ -26,9 +26,15 @@ export async function openDatabase(
   options: { url?: string; dataDir?: string } = {},
 ): Promise<Database> {
   if (options.url !== undefined) {
+    // Migrations need a session, which Neon's PgBouncer pooler doesn't keep: run them on the direct host.
+    const direct = postgres(options.url.replace('-pooler.', '.'), { max: 1, onnotice: () => {} });
+    try {
+      await migratePostgres(drizzlePostgres(direct), { migrationsFolder });
+    } finally {
+      await direct.end();
+    }
     const client = postgres(options.url, { max: 10 });
     const db = drizzlePostgres(client, { schema });
-    await migratePostgres(db, { migrationsFolder });
     return { db: db as unknown as Db, close: () => client.end() };
   }
   const client = new PGlite(options.dataDir);
