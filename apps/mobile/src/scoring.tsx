@@ -195,34 +195,34 @@ export function Pad(props: {
             : `${EXTRAS.find((e) => e.value === mode)?.label}: tap the runs the batters ran.`}
       </Text>
       <View style={styles.grid}>
-        {([0, 1, 2, 3, 4, 6] as const).map((r) => (
-          <Pressable
-            key={r}
-            accessibilityRole="button"
-            accessibilityLabel={`${r} run${r === 1 ? '' : 's'}`}
-            onPress={() => tap(r)}
-            style={({ pressed }) => [
-              styles.runKey,
-              r === 4 && { borderColor: C.four },
-              r === 6 && { borderColor: C.six },
-              pressed && { backgroundColor: C.raised },
-            ]}
-          >
-            <Text
-              style={[styles.runText, r === 4 && { color: C.four }, r === 6 && { color: C.six }]}
+        {([0, 1, 2, 3, 4, 6] as const).map((r) => {
+          const boundary = r === 4 ? C.four : r === 6 ? C.six : null;
+          return (
+            <Pressable
+              key={r}
+              accessibilityRole="button"
+              accessibilityLabel={`${r} run${r === 1 ? '' : 's'}`}
+              onPress={() => tap(r)}
+              style={({ pressed }) => [
+                styles.runKey,
+                boundary !== null && { backgroundColor: boundary, borderColor: boundary },
+                pressed && { opacity: 0.7 },
+              ]}
             >
-              {r}
-            </Text>
-          </Pressable>
-        ))}
+              <Text style={[styles.runText, boundary !== null && { color: '#fff' }]}>{r}</Text>
+            </Pressable>
+          );
+        })}
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Wicket"
+          onPress={() => setSheet('wicket')}
+          style={({ pressed }) => [styles.runKey, styles.wicketKey, pressed && { opacity: 0.7 }]}
+        >
+          <Ionicons name="close-circle" size={24} color="#fff" />
+          <Text style={styles.wicketText}>Out</Text>
+        </Pressable>
       </View>
-      <Button
-        label="Wicket"
-        icon="close-circle"
-        variant="danger"
-        size="lg"
-        onPress={() => setSheet('wicket')}
-      />
       <View style={styles.row}>
         <Button label="Undo" icon="arrow-undo" style={styles.flex} onPress={props.onUndo} />
         <Button
@@ -700,9 +700,9 @@ const styles = StyleSheet.create({
   extras: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   runKey: {
-    flexBasis: '30%',
+    flexBasis: '22%',
     flexGrow: 1,
-    height: 72,
+    height: 68,
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -710,7 +710,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  runText: { color: C.text, fontSize: 32, fontWeight: '800' },
+  runText: { color: C.text, fontSize: 30, fontWeight: '800' },
+  wicketKey: {
+    flexBasis: '47%',
+    flexDirection: 'row',
+    gap: 6,
+    backgroundColor: C.wicket,
+    borderColor: C.wicket,
+  },
+  wicketText: { color: '#fff', fontSize: 20, fontWeight: '900' },
   row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
   pickRow: {

@@ -12,8 +12,8 @@ export default function Layout() {
         <StatusBar style="light" />
         <Stack
           screenOptions={{
-            headerStyle: { backgroundColor: C.bg },
-            headerTintColor: C.text,
+            headerStyle: { backgroundColor: C.hero },
+            headerTintColor: C.onHero,
             headerTitleStyle: { fontWeight: '800' },
             headerShadowVisible: false,
             contentStyle: { backgroundColor: C.bg },

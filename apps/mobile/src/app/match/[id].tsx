@@ -10,7 +10,6 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { randomUUID } from 'expo-crypto';
 import * as Haptics from 'expo-haptics';
-import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -57,7 +56,6 @@ import {
   Empty,
   Segmented,
   TeamBadge,
-  teamColor,
   text,
 } from '../../ui';
 
@@ -261,12 +259,7 @@ function Hero(props: { state: MatchState; innings: InningsState }) {
   const thisOver = innings.balls.filter((b) => b.overNo === lastOver);
 
   return (
-    <LinearGradient
-      colors={[`${teamColor(innings.battingTeamId)}40`, C.surface]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.hero}
-    >
+    <View style={styles.hero}>
       <View style={styles.heroTop}>
         <View style={styles.heroTeam}>
           <TeamBadge name={innings.battingTeamId} size={30} />
@@ -282,14 +275,14 @@ function Hero(props: { state: MatchState; innings: InningsState }) {
         </Text>
       </Text>
       <View style={styles.rates}>
-        <Text style={text.muted}>CRR {inputs.currentRunRate.toFixed(2)}</Text>
+        <Text style={styles.heroMuted}>CRR {inputs.currentRunRate.toFixed(2)}</Text>
         {target !== null && !innings.closed && (
           <>
             <Text style={styles.need}>
               Need {inputs.runsRequired} off {inputs.ballsRemaining}
             </Text>
             {inputs.requiredRunRate !== null && (
-              <Text style={text.muted}>RRR {inputs.requiredRunRate.toFixed(2)}</Text>
+              <Text style={styles.heroMuted}>RRR {inputs.requiredRunRate.toFixed(2)}</Text>
             )}
           </>
         )}
@@ -301,7 +294,7 @@ function Hero(props: { state: MatchState; innings: InningsState }) {
           ))}
         </View>
       )}
-    </LinearGradient>
+    </View>
   );
 }
 
@@ -503,18 +496,12 @@ const styles = StyleSheet.create({
   tabs: { paddingHorizontal: 16, paddingBottom: 8 },
   body: { padding: 16, paddingTop: 8, gap: 14, paddingBottom: 48 },
   flex: { flex: 1 },
-  hero: {
-    backgroundColor: C.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: C.border,
-    padding: 18,
-    gap: 6,
-  },
+  hero: { backgroundColor: C.hero, borderRadius: radius.lg, padding: 18, gap: 6 },
+  heroMuted: { color: C.heroMuted, fontSize: 14 },
   heroTeam: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   heroTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   team: {
-    color: C.muted,
+    color: C.heroMuted,
     fontSize: 15,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -530,10 +517,10 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     overflow: 'hidden',
   },
-  score: { color: C.text, fontSize: 52, fontWeight: '900', fontVariant: ['tabular-nums'] },
-  overs: { color: C.muted, fontSize: 20, fontWeight: '600' },
+  score: { color: C.onHero, fontSize: 52, fontWeight: '900', fontVariant: ['tabular-nums'] },
+  overs: { color: C.heroMuted, fontSize: 20, fontWeight: '600' },
   rates: { flexDirection: 'row', flexWrap: 'wrap', gap: 14, alignItems: 'center' },
-  need: { color: C.accent, fontWeight: '800', fontSize: 15 },
+  need: { color: C.onHero, fontWeight: '800', fontSize: 15 },
   overRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 8 },
   batRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   bowlerRow: { borderTopWidth: 1, borderTopColor: C.border, paddingTop: 12 },
