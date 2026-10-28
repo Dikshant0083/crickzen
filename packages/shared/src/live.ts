@@ -39,6 +39,8 @@ export const liveSnapshotSchema = z.object({
               overs: z.string().max(8),
               runs: z.number().int().min(0),
               wickets: z.number().int().min(0).max(10),
+              /** Bowling the over in progress (or the last one, between overs). */
+              current: z.boolean().default(false),
             }),
           )
           .max(12),
@@ -60,6 +62,15 @@ export const liveSnapshotSchema = z.object({
     )
     .max(30)
     .default([]),
+  /** A milestone the latest ball reached ("FIFTY! Rahul 50 (31)"); screens show each id once. */
+  highlight: z
+    .object({
+      id: z.string().max(80),
+      kind: z.enum(['bat', 'bowl', 'team']),
+      text: z.string().max(100),
+    })
+    .nullable()
+    .default(null),
 });
 
 export type LiveSnapshot = z.infer<typeof liveSnapshotSchema>;

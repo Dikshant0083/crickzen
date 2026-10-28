@@ -322,10 +322,12 @@ export function liveSnapshot(state: MatchState, name: (id: PlayerId) => string):
             overs: oversText(b.balls),
             runs: b.runs,
             wickets: b.wickets,
+            current: !inn.closed && b.playerId === (inn.bowlerId ?? inn.lastOverBowlerId),
           })),
         thisOver: inn.closed ? [] : inn.balls.filter((b) => b.overNo === lastOver).map(ballLabel),
       };
     }),
+    highlight: current === undefined ? null : milestone(current, (id) => cut(name(id))),
     commentary: (current?.balls ?? [])
       .slice(-30)
       .reverse()
@@ -335,4 +337,59 @@ export function liveSnapshot(state: MatchState, name: (id: PlayerId) => string):
         text: cut(commentary(b, name), 200),
       })),
   };
+}
+
+export interface Highlight {
+  /** The ball's event id, so each screen celebrates it once. */
+  id: string;
+  kind: 'bat' | 'bowl' | 'team';
+  text: string;
+}
+
+/**
+ * The milestone the latest ball of an innings reached, if any: a hat-trick,
+ * five wickets, a hundred, a fifty, or the team passing 100, 150, 200…
+ * Only the biggest one is reported.
+ */
+export function milestone(inn: InningsState, name: (id: PlayerId) => string): Highlight | null {
+  const ball = inn.balls.at(-1);
+  if (ball === undefined) return null;
+  const at = (kind: Highlight['kind'], text: string): Highlight => ({
+    id: ball.eventId,
+    kind,
+    text,
+  });
+
+  const bowler = inn.bowlers[ball.bowlerId];
+  if (ball.wicket?.bowlerCredited === true && bowler !== undefined) {
+    // Wides and no-balls between them don't break a hat-trick: only legal deliveries count.
+    const last3 = inn.balls.filter((b) => b.bowlerId === ball.bowlerId && b.legal).slice(-3);
+    if (
+      ball.legal &&
+      last3.length === 3 &&
+      last3.at(-1) === ball &&
+      last3.every((b) => b.wicket?.bowlerCredited === true)
+    ) {
+      return at('bowl', `HAT-TRICK! ${name(ball.bowlerId)}`);
+    }
+    if (bowler.wickets === 5) {
+      return at('bowl', `5 WICKETS! ${name(ball.bowlerId)} ${bowler.wickets}/${bowler.runs}`);
+    }
+  }
+
+  const batter = inn.batters[ball.strikerId];
+  const offBat =
+    ball.extra === null || ball.extra.type === 'noball' ? ball.runsOffBat + ball.overthrowRuns : 0;
+  if (batter !== undefined && offBat > 0) {
+    const before = batter.runs - offBat;
+    const crossed = (n: number) => before < n && batter.runs >= n;
+    const line = `${name(batter.playerId)} ${batter.runs} (${batter.balls})`;
+    if (crossed(100)) return at('bat', `HUNDRED! ${line}`);
+    if (crossed(50)) return at('bat', `FIFTY! ${line}`);
+  }
+
+  const teamBefore = inn.runs - ball.teamRuns;
+  const mark = Math.floor(inn.runs / 50) * 50;
+  if (mark >= 100 && teamBefore < mark) return at('team', `${mark} UP! ${inn.battingTeamId}`);
+  return null;
 }

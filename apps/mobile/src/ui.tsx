@@ -321,6 +321,7 @@ export function Celebration(props: { id: number; label: string; color: string })
         accessibilityLiveRegion="polite"
         style={[
           styles.celebrate,
+          props.label.length > 8 && styles.celebrateLong,
           {
             color: props.color,
             opacity: anim.interpolate({ inputRange: [0, 1, 2], outputRange: [0, 1, 0] }),
@@ -362,6 +363,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  celebrateLong: { fontSize: 34, paddingHorizontal: 24, textAlign: 'center' },
   celebrate: {
     fontSize: 64,
     fontWeight: '900',

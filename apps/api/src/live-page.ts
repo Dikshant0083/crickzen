@@ -40,6 +40,12 @@ export const LIVE_PAGE = `<!doctype html>
   td .how { display:block; color:var(--muted); font-size:12px; }
   .result { font-weight:800; font-size:18px; color:var(--on-hero); margin-top:8px; }
   .error { text-align:center; padding:48px 0; }
+  .cheer { position:fixed; left:50%; top:16px; transform:translate(-50%,-140%); transition:transform .3s;
+           max-width:calc(100% - 32px); padding:12px 22px; border-radius:999px; color:#fff; font-weight:900;
+           font-size:18px; text-align:center; box-shadow:0 6px 20px rgba(0,0,0,.25); z-index:10; }
+  .cheer.show { transform:translate(-50%,0); }
+  .c4 { background:var(--four); } .c6 { background:var(--six); } .cW, .cbowl { background:var(--out); }
+  .cbat { background:linear-gradient(90deg,#B8860B,#F2C14E); color:#2B1D00; } .cteam { background:var(--hero); }
   .feed { list-style:none; margin:0; padding:0; }
   .feed li { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--line); }
   .feed li:first-child { border-top:0; }
@@ -53,6 +59,7 @@ export const LIVE_PAGE = `<!doctype html>
 </style>
 </head>
 <body>
+<div class="cheer" id="cheer" role="status" aria-live="polite"></div>
 <header><div class="wrap" id="top"><span class="muted">Loading…</span></div></header>
 <main id="body"></main>
 <script>
@@ -71,7 +78,33 @@ export const LIVE_PAGE = `<!doctype html>
   // Labels come from the app's ballLabel: "4", "6", "W", "Wd", "2Nb", "B", "1Lb".
   const ballClass = (b) => b === 'W' ? 'bW' : /Wd|Nb|Lb|B/.test(b) ? 'bX' : b === '4' ? 'b4' : b === '6' ? 'b6' : '';
 
+  // Celebrate only balls that land while the page is open, never the score it opens on.
+  let lastBall = null;
+  let lastHighlight;
+  let cheerTimer;
+  function cheer(s) {
+    const h = s.highlight || null;
+    const newest = (s.commentary || [])[0];
+    const key = newest ? newest.over + '|' + newest.text : null;
+    let text = null;
+    let cls = '';
+    if (lastHighlight !== undefined && h !== null && h.id !== lastHighlight) { text = h.text; cls = 'c' + h.kind; }
+    else if (lastBall !== null && key !== lastBall && newest && ['4', '6', 'W'].includes(newest.ball)) {
+      text = newest.ball === 'W' ? 'WICKET!' : newest.ball === '6' ? 'SIX!' : 'FOUR!';
+      cls = 'c' + newest.ball;
+    }
+    lastHighlight = h === null ? null : h.id;
+    lastBall = key;
+    if (text === null) return;
+    const c = document.getElementById('cheer');
+    c.textContent = text;
+    c.className = 'cheer show ' + cls;
+    clearTimeout(cheerTimer);
+    cheerTimer = setTimeout(() => { c.className = 'cheer ' + cls; }, 5000);
+  }
+
   function render(s, updatedAt) {
+    cheer(s);
     const top = document.getElementById('top');
     const body = document.getElementById('body');
     top.replaceChildren();

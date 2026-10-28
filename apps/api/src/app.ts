@@ -15,6 +15,7 @@ import {
 } from './auth.js';
 import type { Db } from './db.js';
 import { LIVE_PAGE } from './live-page.js';
+import { OVERLAY_PAGE } from './overlay-page.js';
 import { liveMatches, refreshTokens, users } from './schema.js';
 
 export interface AppOptions {
@@ -322,6 +323,12 @@ export async function buildApp(options: AppOptions) {
   app.get('/l/:code', async (req, reply) => {
     codeParams.parse(req.params);
     return reply.type('text/html; charset=utf-8').send(LIVE_PAGE);
+  });
+
+  /** The same score as a transparent strip, for streaming apps to lay over live video. */
+  app.get('/l/:code/overlay', async (req, reply) => {
+    codeParams.parse(req.params);
+    return reply.type('text/html; charset=utf-8').send(OVERLAY_PAGE);
   });
 
   app.get('/health', async () => ({ ok: true }));

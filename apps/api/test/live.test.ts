@@ -40,11 +40,12 @@ const snapshot = (runs: number): LiveSnapshot => ({
       batters: [
         { name: '<b>Rahul</b>', runs, balls: 10, fours: 1, sixes: 0, out: null, striker: true },
       ],
-      bowlers: [{ name: 'Arjun', overs: '2.3', runs, wickets: 1 }],
+      bowlers: [{ name: 'Arjun', overs: '2.3', runs, wickets: 1, current: true }],
       thisOver: ['1', '4', 'W'],
     },
   ],
   commentary: [{ over: '2.3', ball: 'W', text: 'Arjun to Rahul, OUT! Bowled (Rahul)' }],
+  highlight: null,
 });
 
 const share = (token: string | undefined, matchId: string, body: unknown) =>
@@ -74,6 +75,11 @@ describe('live share links', () => {
     expect(page.headers['content-type']).toContain('text/html');
     // The page is static: nothing from the snapshot or URL is written into its HTML.
     expect(page.body).not.toContain('Rahul');
+
+    const overlay = await app.inject({ method: 'GET', url: `/l/${code}/overlay` });
+    expect(overlay.headers['content-type']).toContain('text/html');
+    expect(overlay.body).toContain('background:transparent');
+    expect(overlay.body).not.toContain('Rahul');
   });
 
   it('accepts snapshots from app versions that send no commentary', async () => {

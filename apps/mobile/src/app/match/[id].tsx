@@ -33,6 +33,7 @@ import {
   draftFrom,
   liveSnapshot,
   type MatchMeta,
+  milestone,
   oversText,
   shareText,
   superOverPayloads,
@@ -65,6 +66,35 @@ export default function MatchScreen() {
   const liveCode = sharedCode ?? match?.meta.liveCode ?? null;
   const signedIn = auth.user !== null && auth.user !== undefined;
   const { shareLive: sendLive } = auth;
+
+  // Celebrate once the new score exists: a milestone beats FOUR/SIX/WICKET. Undo, edits
+  // and opening the match never celebrate, because the log must have grown by a ball.
+  const seenEvents = useRef<number | null>(null);
+  useEffect(() => {
+    if (match === null) return;
+    const before = seenEvents.current;
+    seenEvents.current = match.events.length;
+    if (before === null || match.events.length <= before) return;
+    if (match.events.at(-1)?.payload.kind !== 'delivery.recorded') return;
+    const inn = match.state.innings.at(-1);
+    const ball = inn?.balls.at(-1);
+    if (inn === undefined || ball === undefined) return;
+    const h = milestone(inn, (p) => match.meta.names[p] ?? p);
+    const big =
+      h !== null
+        ? {
+            label: h.text,
+            color: h.kind === 'bat' ? C.extra : h.kind === 'bowl' ? C.wicket : C.accent,
+          }
+        : ball.wicket !== null
+          ? { label: 'WICKET!', color: C.wicket }
+          : ball.runsOffBat === 6
+            ? { label: 'SIX!', color: C.six }
+            : ball.runsOffBat === 4
+              ? { label: 'FOUR!', color: C.four }
+              : null;
+    if (big !== null) setCheer((c) => ({ id: c.id + 1, ...big }));
+  }, [match]);
 
   // Once shared, every change (a ball, an undo, an edit) sends the whole score. A failed
   // send is fine: the next one carries everything, so spectators catch up.
@@ -101,7 +131,6 @@ export default function MatchScreen() {
             : d.runsOffBat === 4
               ? { label: 'FOUR!', color: C.four }
               : null;
-    if (big !== null) setCheer((c) => ({ id: c.id + 1, ...big }));
     Haptics.impactAsync(
       big === null ? Haptics.ImpactFeedbackStyle.Light : Haptics.ImpactFeedbackStyle.Heavy,
     );
