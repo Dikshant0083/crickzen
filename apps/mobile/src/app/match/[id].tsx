@@ -137,7 +137,25 @@ export default function MatchScreen() {
     return true;
   };
 
-  const shareLink = async () => {
+  /** Spectators get the score page; a streamer gets the overlay to lay over YouTube video. */
+  const shareLink = async (kind: 'page' | 'overlay') => {
+    try {
+      const { code } = await sendLive(id, liveSnapshot(state, name));
+      if (meta.liveCode !== code) await saveMatchMeta(db, id, { ...meta, liveCode: code });
+      setSharedCode(code);
+      const teams = state.config.teams.join(' vs ');
+      await Share.share({
+        message:
+          kind === 'page'
+            ? `🏏 ${teams} — follow live: ${API_URL}/l/${code}`
+            : `${API_URL}/l/${code}/overlay`,
+      });
+    } catch (e) {
+      Alert.alert('Could not share', e instanceof Error ? e.message : String(e));
+    }
+  };
+
+  const chooseShare = () => {
     if (!auth.configured || !signedIn) {
       return Alert.alert(
         'Sign in to share live',
@@ -148,16 +166,11 @@ export default function MatchScreen() {
         ],
       );
     }
-    try {
-      const { code } = await sendLive(id, liveSnapshot(state, name));
-      if (meta.liveCode !== code) await saveMatchMeta(db, id, { ...meta, liveCode: code });
-      setSharedCode(code);
-      await Share.share({
-        message: `🏏 ${state.config.teams.join(' vs ')} — follow live: ${API_URL}/l/${code}`,
-      });
-    } catch (e) {
-      Alert.alert('Could not share', e instanceof Error ? e.message : String(e));
-    }
+    Alert.alert('Share live', 'Who is the link for?', [
+      { text: 'Spectators', onPress: () => shareLink('page') },
+      { text: 'YouTube overlay', onPress: () => shareLink('overlay') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
   };
 
   const undo = () => {
@@ -181,7 +194,7 @@ export default function MatchScreen() {
             <Pressable
               accessibilityRole="button"
               accessibilityLabel={liveCode === null ? 'Share live link' : 'Share live link again'}
-              onPress={shareLink}
+              onPress={chooseShare}
               hitSlop={10}
               style={styles.liveButton}
             >
