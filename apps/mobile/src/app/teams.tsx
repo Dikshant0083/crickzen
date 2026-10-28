@@ -1,11 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
-import { DevTools } from '../../DevTools';
-import { listTeams, useFocusLoad } from '../../db';
-import { initials } from '../../people';
-import { C, radius } from '../../theme';
-import { Button, Empty } from '../../ui';
+import { DevTools } from '../DevTools';
+import { listTeams, useFocusLoad } from '../db';
+import { initials } from '../people';
+import { C, radius } from '../theme';
+import { Button, Empty } from '../ui';
 
 export default function Teams() {
   const [teams, reload] = useFocusLoad(listTeams);

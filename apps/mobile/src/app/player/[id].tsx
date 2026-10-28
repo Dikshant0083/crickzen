@@ -1,14 +1,23 @@
 import { otherTeam } from '@criczen/engine';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import type { SQLiteDatabase } from 'expo-sqlite';
-import { useCallback } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { getPlayer, loadAllMatches, useFocusLoad } from '../../db';
-import { oversText } from '../../match';
+import { useSQLiteContext } from 'expo-sqlite';
+import { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { getPlayer, loadAllMatches, type Player, savePlayer, useFocusLoad } from '../../db';
 import { initials, ROLE } from '../../people';
-import { average, careerStats, rate } from '../../stats';
+import { CareerCards } from '../../scorecard';
+import { normalizeMobile } from '../../stats';
 import { C } from '../../theme';
-import { Card, Empty, Stat, text } from '../../ui';
+import { Button, Card, Empty, Field, text } from '../../ui';
 
 export default function PlayerProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -19,17 +28,13 @@ export default function PlayerProfile() {
     }),
     [id],
   );
-  const [data] = useFocusLoad(load);
+  const [data, reload] = useFocusLoad(load);
 
   if (data === null) return <ActivityIndicator style={{ padding: 24 }} color={C.accent} />;
   const { player, matches } = data;
   if (player === null) return <Empty icon="person-outline" title="Player not found" />;
 
   const states = matches.map((m) => m.state);
-  const c = careerStats(states, id);
-  const bat = c.batting;
-  const bowl = c.bowling;
-  const outs = bat.innings - bat.notOuts;
   const history = matches.filter((m) =>
     Object.values(m.state.squads).some((s) => s.playingXI.includes(id)),
   );
@@ -47,44 +52,8 @@ export default function PlayerProfile() {
         </View>
       </View>
 
-      <Card title={`Batting · ${c.matches} matches`}>
-        <View style={styles.grid}>
-          <Stat label="Runs" value={bat.runs} />
-          <Stat label="Innings" value={bat.innings} />
-          <Stat
-            label="Highest"
-            value={bat.innings === 0 ? '-' : `${bat.highest}${bat.highestNotOut ? '*' : ''}`}
-          />
-          <Stat label="Average" value={average(bat.runs, outs)} />
-          <Stat label="Strike rate" value={rate(bat.runs, bat.balls, 100)} />
-          <Stat label="Not outs" value={bat.notOuts} />
-          <Stat label="50s / 100s" value={`${bat.fifties} / ${bat.hundreds}`} />
-          <Stat label="4s / 6s" value={`${bat.fours} / ${bat.sixes}`} />
-          <Stat label="Ducks" value={bat.ducks} />
-        </View>
-      </Card>
-
-      <Card title="Bowling">
-        <View style={styles.grid}>
-          <Stat label="Wickets" value={bowl.wickets} />
-          <Stat label="Overs" value={oversText(bowl.balls)} />
-          <Stat
-            label="Best"
-            value={bowl.innings === 0 ? '-' : `${bowl.bestWickets}/${bowl.bestRuns}`}
-          />
-          <Stat label="Economy" value={rate(bowl.runs, bowl.balls, 6)} />
-          <Stat label="Average" value={average(bowl.runs, bowl.wickets)} />
-          <Stat label="Maidens" value={bowl.maidens} />
-        </View>
-      </Card>
-
-      <Card title="Fielding">
-        <View style={styles.grid}>
-          <Stat label="Catches" value={c.fielding.catches} />
-          <Stat label="Stumpings" value={c.fielding.stumpings} />
-          <Stat label="Run outs" value={c.fielding.runOuts} />
-        </View>
-      </Card>
+      {player.mobile === null && <AddMobile player={player} onSaved={reload} />}
+      <CareerCards states={states} id={id} />
 
       <Card title="Matches">
         {history.length === 0 && <Text style={text.muted}>Not picked in a match yet.</Text>}
@@ -124,6 +93,36 @@ export default function PlayerProfile() {
   );
 }
 
+/** Players saved before numbers were required: adding one links their stats to their account. */
+function AddMobile(props: { player: Player; onSaved: () => void }) {
+  const db = useSQLiteContext();
+  const [mobile, setMobile] = useState('');
+  const save = async () => {
+    const normalized = normalizeMobile(mobile);
+    if (normalized === null || normalized.length !== 10) {
+      return Alert.alert('Check the number', 'Mobile number should have 10 digits.');
+    }
+    const problem = await savePlayer(db, { ...props.player, mobile: normalized });
+    if (problem !== null) return Alert.alert('Already added', problem);
+    props.onSaved();
+  };
+  return (
+    <Card title="Add mobile number">
+      <Text style={text.muted}>
+        When {props.player.name} signs in with this number, these stats show on their Me tab.
+      </Text>
+      <Field
+        label="Mobile number"
+        value={mobile}
+        onChangeText={setMobile}
+        placeholder="10-digit number"
+        keyboardType="phone-pad"
+      />
+      <Button label="Save number" icon="checkmark" variant="primary" onPress={save} />
+    </Card>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { padding: 16, gap: 14, paddingBottom: 48 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 14 },
@@ -136,7 +135,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   initials: { color: C.onAccent, fontSize: 24, fontWeight: '900' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   matchRow: { paddingVertical: 8, borderTopWidth: 1, borderTopColor: C.border, gap: 2 },
   matchTitle: { color: C.text, fontSize: 15, fontWeight: '700' },
 });

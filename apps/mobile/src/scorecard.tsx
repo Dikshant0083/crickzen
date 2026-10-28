@@ -1,8 +1,59 @@
-import { type InningsState, type PlayerId, totalExtras } from '@criczen/engine';
+import { type InningsState, type MatchState, type PlayerId, totalExtras } from '@criczen/engine';
 import { StyleSheet, Text, View } from 'react-native';
 import { howOut, oversText } from './match';
+import { average, careerStats, rate } from './stats';
 import { C } from './theme';
-import { Card, text } from './ui';
+import { Card, Stat, text } from './ui';
+
+/** Batting, bowling and fielding totals for one player across the given matches. */
+export function CareerCards(props: { states: readonly MatchState[]; id: PlayerId }) {
+  const c = careerStats(props.states, props.id);
+  const bat = c.batting;
+  const bowl = c.bowling;
+  const outs = bat.innings - bat.notOuts;
+  return (
+    <>
+      <Card title={`Batting · ${c.matches} matches`}>
+        <View style={styles.statGrid}>
+          <Stat label="Runs" value={bat.runs} />
+          <Stat label="Innings" value={bat.innings} />
+          <Stat
+            label="Highest"
+            value={bat.innings === 0 ? '-' : `${bat.highest}${bat.highestNotOut ? '*' : ''}`}
+          />
+          <Stat label="Average" value={average(bat.runs, outs)} />
+          <Stat label="Strike rate" value={rate(bat.runs, bat.balls, 100)} />
+          <Stat label="Not outs" value={bat.notOuts} />
+          <Stat label="50s / 100s" value={`${bat.fifties} / ${bat.hundreds}`} />
+          <Stat label="4s / 6s" value={`${bat.fours} / ${bat.sixes}`} />
+          <Stat label="Ducks" value={bat.ducks} />
+        </View>
+      </Card>
+
+      <Card title="Bowling">
+        <View style={styles.statGrid}>
+          <Stat label="Wickets" value={bowl.wickets} />
+          <Stat label="Overs" value={oversText(bowl.balls)} />
+          <Stat
+            label="Best"
+            value={bowl.innings === 0 ? '-' : `${bowl.bestWickets}/${bowl.bestRuns}`}
+          />
+          <Stat label="Economy" value={rate(bowl.runs, bowl.balls, 6)} />
+          <Stat label="Average" value={average(bowl.runs, bowl.wickets)} />
+          <Stat label="Maidens" value={bowl.maidens} />
+        </View>
+      </Card>
+
+      <Card title="Fielding">
+        <View style={styles.statGrid}>
+          <Stat label="Catches" value={c.fielding.catches} />
+          <Stat label="Stumpings" value={c.fielding.stumpings} />
+          <Stat label="Run outs" value={c.fielding.runOuts} />
+        </View>
+      </Card>
+    </>
+  );
+}
 
 export function InningsCard(props: { innings: InningsState; name: (id: PlayerId) => string }) {
   const { innings, name } = props;
@@ -127,6 +178,7 @@ function Row(props: { cells: string[]; head?: boolean; bold?: boolean }) {
 }
 
 const styles = StyleSheet.create({
+  statGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   total: { color: C.text, fontSize: 18, fontWeight: '800' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 2 },
   first: { flex: 1, color: C.text },

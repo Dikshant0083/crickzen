@@ -1,23 +1,24 @@
 import { Appearance } from 'react-native';
 
+/** Softer than pure neon on black: lifted greys and a calmer green read better at night. */
 const dark = {
-  bg: '#0B0F0D',
-  surface: '#141A17',
-  raised: '#1C2420',
-  border: '#26302B',
-  text: '#F2F7F4',
-  muted: '#8A9A91',
-  faint: '#5A6861',
-  accent: '#2EE67A',
-  onAccent: '#04140A',
-  four: '#3DA5FF',
-  six: '#B46CFF',
-  wicket: '#FF4D5E',
-  extra: '#FFB020',
+  bg: '#101513',
+  surface: '#181F1C',
+  raised: '#222B27',
+  border: '#2C3732',
+  text: '#EDF3EF',
+  muted: '#98A79F',
+  faint: '#66756D',
+  accent: '#3DCB7F',
+  onAccent: '#06180D',
+  four: '#4EA8F5',
+  six: '#A77BF3',
+  wicket: '#F0596A',
+  extra: '#F2AE3D',
   /** The deep-green score header, same role in both modes. */
-  hero: '#103A2A',
-  onHero: '#F2F7F4',
-  heroMuted: '#9FD9BC',
+  hero: '#0F4D36',
+  onHero: '#F2FBF6',
+  heroMuted: '#A8E3C7',
 };
 
 /** Light is the outdoor default: it stays readable in direct sun at the ground. */

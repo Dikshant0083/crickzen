@@ -1,12 +1,12 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import type { SQLiteDatabase } from 'expo-sqlite';
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { listPlayers, loadAllMatches, useFocusLoad } from '../../db';
-import { initials, matchesQuery, type RankBy, ROLE, rankPlayers } from '../../people';
-import { C, radius } from '../../theme';
-import { Empty, Segmented } from '../../ui';
+import { listPlayers, loadAllMatches, useFocusLoad } from '../db';
+import { initials, matchesQuery, type RankBy, ROLE, rankPlayers } from '../people';
+import { C, radius } from '../theme';
+import { Empty, Segmented } from '../ui';
 
 const load = async (db: SQLiteDatabase) => ({
   players: await listPlayers(db),
@@ -16,7 +16,8 @@ const load = async (db: SQLiteDatabase) => ({
 export default function Players() {
   const [data] = useFocusLoad(load);
   const [query, setQuery] = useState('');
-  const [by, setBy] = useState<RankBy>('overall');
+  const params = useLocalSearchParams<{ by?: RankBy }>();
+  const [by, setBy] = useState<RankBy>(params.by ?? 'overall');
   const players = data?.players ?? null;
   const shown = rankPlayers(players ?? [], data?.states ?? [], by).filter((p) =>
     matchesQuery(p, query),

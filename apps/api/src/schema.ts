@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { index, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { index, jsonb, pgTable, text, timestamp, unique, uuid } from 'drizzle-orm/pg-core';
 
 /**
  * Identity (ARCHITECTURE §5.1, §5.3). Users sign in with a mobile number or a
@@ -35,4 +35,23 @@ export const refreshTokens = pgTable(
     createdUa: text('created_ua'),
   },
   (t) => [index('refresh_tokens_family_idx').on(t.familyId)],
+);
+
+/**
+ * A match shared live: the scorer's latest snapshot, read by anyone with the
+ * code. One row per match per owner, so re-sharing keeps the same link.
+ */
+export const liveMatches = pgTable(
+  'live_matches',
+  {
+    code: text('code').primaryKey(),
+    ownerId: uuid('owner_id')
+      .notNull()
+      .references(() => users.id),
+    /** The match id on the scorer's phone. */
+    matchId: text('match_id').notNull(),
+    snapshot: jsonb('snapshot').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [unique('live_matches_owner_match').on(t.ownerId, t.matchId)],
 );

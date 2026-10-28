@@ -11,12 +11,15 @@ import {
   type PlayerId,
   type WicketInput,
 } from '@criczen/engine';
+import type { LiveSnapshot } from '@criczen/shared';
 
 /** Display data the engine does not hold: it only knows ids. */
 export interface MatchMeta {
   names: Record<PlayerId, string>;
   /** Set on a super over: the tied match it decides. */
   superOverOf?: string;
+  /** Set once the scorer shares the match live; every later ball is sent to it. */
+  liveCode?: string;
 }
 
 export interface Squad {
@@ -282,4 +285,45 @@ export function superOverPayloads(state: MatchState, matchId: string): Payload[]
     tossChoice: 'bat',
     wicketsPerInnings: 2,
   });
+}
+
+/** What spectators see at the share link, rebuilt from the whole state after every ball. */
+export function liveSnapshot(state: MatchState, name: (id: PlayerId) => string): LiveSnapshot {
+  const cut = (s: string, n = 60) => s.slice(0, n);
+  return {
+    title: cut(state.config.teams.join(' vs '), 130),
+    totalOvers: state.config.totalOvers,
+    result: state.result?.description ?? (state.status === 'abandoned' ? 'Abandoned' : null),
+    innings: state.innings.map((inn) => {
+      const lastOver = inn.balls.at(-1)?.overNo;
+      return {
+        team: cut(inn.battingTeamId),
+        runs: inn.runs,
+        wickets: inn.wickets,
+        overs: oversText(inn.legalBalls),
+        target: inn.revisedTarget?.runs ?? inn.target,
+        batters: Object.values(inn.batters).map((b) => ({
+          name: cut(name(b.playerId)),
+          runs: b.runs,
+          balls: b.balls,
+          fours: b.fours,
+          sixes: b.sixes,
+          out:
+            b.status === 'not_out' || b.status === 'at_crease'
+              ? null
+              : cut(howOut(inn, b.playerId, name), 120),
+          striker: b.playerId === inn.strikerId && !inn.closed,
+        })),
+        bowlers: Object.values(inn.bowlers)
+          .filter((b) => b.balls > 0)
+          .map((b) => ({
+            name: cut(name(b.playerId)),
+            overs: oversText(b.balls),
+            runs: b.runs,
+            wickets: b.wickets,
+          })),
+        thisOver: inn.closed ? [] : inn.balls.filter((b) => b.overNo === lastOver).map(ballLabel),
+      };
+    }),
+  };
 }

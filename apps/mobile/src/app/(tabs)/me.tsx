@@ -1,13 +1,21 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import type { SQLiteDatabase } from 'expo-sqlite';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../auth';
+import { listPlayers, loadAllMatches, useFocusLoad } from '../../db';
 import { initials, maskMobile } from '../../people';
+import { CareerCards } from '../../scorecard';
 import { ApiError } from '../../session';
 import { C, radius } from '../../theme';
 import { Button, Card, Field, text } from '../../ui';
+
+const loadStats = async (db: SQLiteDatabase) => ({
+  players: await listPlayers(db),
+  states: (await loadAllMatches(db)).map((m) => m.state),
+});
 
 export default function Me() {
   const auth = useAuth();
@@ -15,6 +23,7 @@ export default function Me() {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
+  const [stats] = useFocusLoad(loadStats);
 
   if (user === undefined) return <ActivityIndicator style={{ padding: 24 }} color={C.accent} />;
 
@@ -137,9 +146,43 @@ export default function Me() {
         <Button label="Edit profile" icon="create" onPress={startEdit} />
       )}
 
+      <MyStats user={user} stats={stats} />
+
       <Button label="Sign out" icon="log-out" variant="ghost" onPress={signOut} />
       <Button label="Delete account" icon="trash" variant="ghost" onPress={remove} />
     </ScrollView>
+  );
+}
+
+/** The signed-in user's own career, found by the mobile number the scorer saved them with. */
+function MyStats(props: {
+  user: { mobile: string | null };
+  stats: Awaited<ReturnType<typeof loadStats>> | null;
+}) {
+  if (props.stats === null) return null;
+  const { mobile } = props.user;
+  // Never match on a missing number: that would pick any player saved without one.
+  const me = mobile === null ? undefined : props.stats.players.find((p) => p.mobile === mobile);
+  if (me === undefined) {
+    return (
+      <Card title="My stats">
+        <Text style={text.muted}>
+          No player on this phone has your number ({maskMobile(props.user.mobile)}) yet. When a
+          scorer adds you with it, your runs and wickets show here.
+        </Text>
+      </Card>
+    );
+  }
+  return (
+    <>
+      <Text style={text.label}>My stats</Text>
+      <CareerCards states={props.stats.states} id={me.id} />
+      <Button
+        label="Full profile and matches"
+        icon="stats-chart"
+        onPress={() => router.push({ pathname: '/player/[id]', params: { id: me.id } })}
+      />
+    </>
   );
 }
 

@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as Sharing from 'expo-sharing';
 import { useSQLiteContext } from 'expo-sqlite';
-import { type ComponentRef, useRef, useState } from 'react';
+import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -25,11 +25,13 @@ import {
   View,
 } from 'react-native';
 import { captureRef } from 'react-native-view-shot';
+import { API_URL, useAuth } from '../../auth';
 import { Manhattan, Worm } from '../../charts';
-import { createMatch, useMatch } from '../../db';
+import { createMatch, saveMatchMeta, useMatch } from '../../db';
 import {
   commentary,
   draftFrom,
+  liveSnapshot,
   type MatchMeta,
   oversText,
   shareText,
@@ -48,16 +50,7 @@ import {
 import { careerStats } from '../../stats';
 import { C, radius } from '../../theme';
 import { playerOfMatch } from '../../tournament';
-import {
-  BallDot,
-  Button,
-  Card,
-  Celebration,
-  Empty,
-  Segmented,
-  TeamBadge,
-  text,
-} from '../../ui';
+import { BallDot, Button, Card, Celebration, Empty, Segmented, TeamBadge, text } from '../../ui';
 
 type Tab = 'live' | 'card' | 'balls' | 'charts';
 
@@ -67,6 +60,21 @@ export default function MatchScreen() {
   const { match, error, append: save } = useMatch(db, id);
   const [tab, setTab] = useState<Tab>('live');
   const [cheer, setCheer] = useState({ id: 0, label: '', color: '' });
+  const auth = useAuth();
+  const [sharedCode, setSharedCode] = useState<string | null>(null);
+  const liveCode = sharedCode ?? match?.meta.liveCode ?? null;
+  const signedIn = auth.user !== null && auth.user !== undefined;
+  const { shareLive: sendLive } = auth;
+
+  // Once shared, every change (a ball, an undo, an edit) sends the whole score. A failed
+  // send is fine: the next one carries everything, so spectators catch up.
+  useEffect(() => {
+    if (match === null || liveCode === null || !signedIn) return;
+    sendLive(
+      id,
+      liveSnapshot(match.state, (p) => match.meta.names[p] ?? p),
+    ).catch(() => {});
+  }, [id, match, liveCode, signedIn, sendLive]);
 
   if (error !== null) return <Text style={[styles.pad, { color: C.wicket }]}>{error}</Text>;
   if (match === null) return <ActivityIndicator style={styles.pad} color={C.accent} />;
@@ -100,6 +108,29 @@ export default function MatchScreen() {
     return true;
   };
 
+  const shareLink = async () => {
+    if (!auth.configured || !signedIn) {
+      return Alert.alert(
+        'Sign in to share live',
+        'Spectators follow your score from a link. Sign in on the Me tab first.',
+        [
+          { text: 'Not now', style: 'cancel' },
+          { text: 'Sign in', onPress: () => router.push('/auth/login') },
+        ],
+      );
+    }
+    try {
+      const { code } = await sendLive(id, liveSnapshot(state, name));
+      if (meta.liveCode !== code) await saveMatchMeta(db, id, { ...meta, liveCode: code });
+      setSharedCode(code);
+      await Share.share({
+        message: `🏏 ${state.config.teams.join(' vs ')} — follow live: ${API_URL}/l/${code}`,
+      });
+    } catch (e) {
+      Alert.alert('Could not share', e instanceof Error ? e.message : String(e));
+    }
+  };
+
   const undo = () => {
     const last = voidLastDelivery(state);
     if (last === null) return Alert.alert('Nothing to undo', 'No ball bowled in this innings yet.');
@@ -114,7 +145,23 @@ export default function MatchScreen() {
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen options={{ title: state.config.teams.join(' vs ') }} />
+      <Stack.Screen
+        options={{
+          title: state.config.teams.join(' vs '),
+          headerRight: () => (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={liveCode === null ? 'Share live link' : 'Share live link again'}
+              onPress={shareLink}
+              hitSlop={10}
+              style={styles.liveButton}
+            >
+              <Ionicons name="radio" size={20} color={C.onHero} />
+              {liveCode !== null && <View style={styles.liveDot} />}
+            </Pressable>
+          ),
+        }}
+      />
       <View style={styles.tabs}>
         <Segmented
           options={[
@@ -492,6 +539,25 @@ function Balls(props: { state: MatchState; name: Name; append: Append }) {
 
 const styles = StyleSheet.create({
   pad: { padding: 24 },
+  liveButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8,
+  },
+  /** Shown once the match is shared: every ball is going out live. */
+  liveDot: {
+    position: 'absolute',
+    top: 7,
+    right: 7,
+    width: 9,
+    height: 9,
+    borderRadius: 5,
+    backgroundColor: '#FF5A68',
+  },
   screen: { flex: 1 },
   tabs: { paddingHorizontal: 16, paddingBottom: 8 },
   body: { padding: 16, paddingTop: 8, gap: 14, paddingBottom: 48 },

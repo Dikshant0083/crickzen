@@ -3,6 +3,8 @@
  * token rules are unit-tested: storage and fetch are passed in.
  */
 
+import type { LiveSnapshot } from '@criczen/shared';
+
 export interface User {
   id: string;
   name: string;
@@ -152,6 +154,13 @@ export function createSession(options: { baseUrl: string; storage: Storage; fetc
       const user = await authed<User>('/me', { method: 'PATCH', body: JSON.stringify(patch) });
       await storage.set(USER, JSON.stringify(user));
       return user;
+    },
+    /** Sends the latest score; the first call for a match creates its public link. */
+    shareLive(matchId: string, snapshot: LiveSnapshot) {
+      return authed<{ code: string }>(`/matches/${encodeURIComponent(matchId)}/live`, {
+        method: 'PUT',
+        body: JSON.stringify(snapshot),
+      });
     },
     async deleteAccount() {
       await authed('/me', { method: 'DELETE' });

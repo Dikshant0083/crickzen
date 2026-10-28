@@ -198,6 +198,10 @@ export async function createMatch(
   return null;
 }
 
+export async function saveMatchMeta(db: SQLiteDatabase, matchId: string, meta: MatchMeta) {
+  await db.runAsync('UPDATE matches SET meta = ? WHERE id = ?', JSON.stringify(meta), matchId);
+}
+
 export async function loadEvents(db: SQLiteDatabase, matchId: string): Promise<MatchEvent[]> {
   const rows = await db.getAllAsync<{ body: string }>(
     'SELECT body FROM events WHERE match_id = ? ORDER BY seq',

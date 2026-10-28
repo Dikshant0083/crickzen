@@ -15,4 +15,12 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
   return context.resolveRequest(context, moduleName, platform);
 };
 
+// Web preview only: expo-sqlite runs as WebAssembly and needs cross-origin isolation.
+config.resolver.assetExts.push('wasm');
+config.server.enhanceMiddleware = (middleware) => (req, res, next) => {
+  res.setHeader('Cross-Origin-Embedder-Policy', 'credentialless');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  middleware(req, res, next);
+};
+
 module.exports = config;

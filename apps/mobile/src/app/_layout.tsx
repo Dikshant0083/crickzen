@@ -21,6 +21,8 @@ export default function Layout() {
         >
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="new" options={{ title: 'New match' }} />
+          <Stack.Screen name="players" options={{ title: 'Players' }} />
+          <Stack.Screen name="teams" options={{ title: 'Teams' }} />
           <Stack.Screen name="match/[id]" options={{ title: 'Match' }} />
           <Stack.Screen name="player/[id]" options={{ title: 'Player' }} />
           <Stack.Screen name="team/[id]" options={{ title: 'Team' }} />

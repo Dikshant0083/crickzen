@@ -26,19 +26,19 @@ import {
   type Runs,
 } from './match';
 import { C, radius } from './theme';
-import { Button, Card, Chip, Choice, Field, Sheet, text } from './ui';
+import { Button, Card, Chip, Choice, Field, Segmented, Sheet, text } from './ui';
 
 export type Append = (payload: Payload) => Promise<boolean>;
 export type Name = (id: PlayerId) => string;
 
 const ALL_DISMISSALS = Object.keys(DISMISSAL_LABEL) as DismissalKind[];
 const RUNS: readonly Runs[] = [0, 1, 2, 3, 4, 5, 6];
-const EXTRAS: readonly { value: ExtraMode; label: string }[] = [
-  { value: 'none', label: 'Normal' },
-  { value: 'wide', label: 'Wide' },
-  { value: 'noball', label: 'No ball' },
-  { value: 'bye', label: 'Bye' },
-  { value: 'legbye', label: 'Leg bye' },
+const EXTRAS: readonly { value: ExtraMode; label: string; short: string }[] = [
+  { value: 'none', label: 'Normal', short: 'Runs' },
+  { value: 'wide', label: 'Wide', short: 'Wide' },
+  { value: 'noball', label: 'No ball', short: 'NB' },
+  { value: 'bye', label: 'Bye', short: 'Bye' },
+  { value: 'legbye', label: 'Leg bye', short: 'LB' },
 ];
 
 const runOptions = (max = 6) =>
@@ -66,6 +66,20 @@ export function OpenInnings(props: { state: MatchState; name: Name; append: Appe
   const bowling = squadOf(state, otherTeam(state.config, battingTeamId))?.playingXI ?? [];
   const opts = (ids: readonly PlayerId[]) => ids.map((p) => ({ value: p, label: name(p) }));
   const ready = striker !== null && nonStriker !== null && bowler !== null;
+  // Once picked, a list folds to the chosen name so the next question is in view.
+  const pick = (
+    ids: readonly PlayerId[],
+    value: PlayerId | null,
+    set: (p: PlayerId | null) => void,
+  ) =>
+    value === null ? (
+      <Choice options={opts(ids)} value={null} onChange={set} />
+    ) : (
+      <View style={styles.row}>
+        <Chip label={name(value)} selected onPress={() => set(null)} />
+        <Text style={[text.muted, styles.change]}>Tap to change</Text>
+      </View>
+    );
 
   return (
     <Card title={previous === undefined ? 'First innings' : 'Second innings'}>
@@ -75,15 +89,15 @@ export function OpenInnings(props: { state: MatchState; name: Name; append: Appe
         </Text>
       )}
       <Text style={text.label}>{battingTeamId} · striker</Text>
-      <Choice options={opts(batting)} value={striker} onChange={setStriker} />
+      {pick(batting, striker, setStriker)}
       <Text style={text.label}>Non-striker</Text>
-      <Choice
-        options={opts(batting.filter((p) => p !== striker))}
-        value={nonStriker}
-        onChange={setNonStriker}
-      />
+      {pick(
+        batting.filter((p) => p !== striker),
+        nonStriker,
+        setNonStriker,
+      )}
       <Text style={text.label}>Opening bowler</Text>
-      <Choice options={opts(bowling)} value={bowler} onChange={setBowler} />
+      {pick(bowling, bowler, setBowler)}
       <Button
         label="Start innings"
         icon="play"
@@ -177,23 +191,18 @@ export function Pad(props: {
 
   return (
     <View style={styles.pad}>
-      <View style={styles.extras}>
-        {EXTRAS.map((e) => (
-          <Chip
-            key={e.value}
-            label={e.label}
-            selected={mode === e.value}
-            onPress={() => setMode(e.value)}
-          />
-        ))}
-      </View>
-      <Text style={text.muted}>
-        {mode === 'none'
-          ? 'Tap the runs scored off the bat.'
-          : mode === 'noball'
+      <Segmented
+        options={EXTRAS.map((e) => ({ value: e.value, label: e.short }))}
+        value={mode}
+        onChange={setMode}
+      />
+      {mode !== 'none' && (
+        <Text style={text.muted}>
+          {mode === 'noball'
             ? 'No ball: tap runs off the bat (0 if none).'
             : `${EXTRAS.find((e) => e.value === mode)?.label}: tap the runs the batters ran.`}
-      </Text>
+        </Text>
+      )}
       <View style={styles.grid}>
         {([0, 1, 2, 3, 4, 6] as const).map((r) => {
           const boundary = r === 4 ? C.four : r === 6 ? C.six : null;
@@ -219,14 +228,14 @@ export function Pad(props: {
           onPress={() => setSheet('wicket')}
           style={({ pressed }) => [styles.runKey, styles.wicketKey, pressed && { opacity: 0.7 }]}
         >
-          <Ionicons name="close-circle" size={24} color="#fff" />
+          <Ionicons name="close-circle" size={20} color="#fff" />
           <Text style={styles.wicketText}>Out</Text>
         </Pressable>
       </View>
       <View style={styles.row}>
         <Button label="Undo" icon="arrow-undo" style={styles.flex} onPress={props.onUndo} />
         <Button
-          label="5, overthrows…"
+          label="Custom"
           icon="create"
           style={styles.flex}
           onPress={() => setSheet('custom')}
@@ -697,12 +706,11 @@ function PenaltyForm(props: { state: MatchState; onSubmit: (p: Payload) => void 
 
 const styles = StyleSheet.create({
   pad: { gap: 12 },
-  extras: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   runKey: {
     flexBasis: '22%',
     flexGrow: 1,
-    height: 68,
+    height: 56,
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: C.border,
@@ -710,7 +718,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  runText: { color: C.text, fontSize: 30, fontWeight: '800' },
+  runText: { color: C.text, fontSize: 24, fontWeight: '800' },
   wicketKey: {
     flexBasis: '47%',
     flexDirection: 'row',
@@ -718,7 +726,8 @@ const styles = StyleSheet.create({
     backgroundColor: C.wicket,
     borderColor: C.wicket,
   },
-  wicketText: { color: '#fff', fontSize: 20, fontWeight: '900' },
+  wicketText: { color: '#fff', fontSize: 18, fontWeight: '900' },
+  change: { alignSelf: 'center' },
   row: { flexDirection: 'row', gap: 8 },
   flex: { flex: 1 },
   pickRow: {

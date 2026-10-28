@@ -1,4 +1,5 @@
-import { normalizeMobile } from '@criczen/shared';
+import { randomBytes } from 'node:crypto';
+import { liveSnapshotSchema, normalizeMobile } from '@criczen/shared';
 import rateLimit from '@fastify/rate-limit';
 import { and, eq, isNull } from 'drizzle-orm';
 import Fastify, { type FastifyReply, type FastifyRequest } from 'fastify';
@@ -13,7 +14,8 @@ import {
   verifyPassword,
 } from './auth.js';
 import type { Db } from './db.js';
-import { refreshTokens, users } from './schema.js';
+import { LIVE_PAGE } from './live-page.js';
+import { liveMatches, refreshTokens, users } from './schema.js';
 
 export interface AppOptions {
   db: Db;
@@ -46,6 +48,8 @@ const loginBody = z.object({
 });
 const tokenBody = z.object({ refreshToken: z.string().min(1).max(200) });
 const updateBody = z.object({ name: name.optional(), username: username.nullable().optional() });
+const matchParams = z.object({ matchId: z.string().min(1).max(64) });
+const codeParams = z.object({ code: z.string().regex(/^[\w-]{12}$/) });
 
 type User = typeof users.$inferSelect;
 
@@ -277,6 +281,47 @@ export async function buildApp(options: AppOptions) {
       .set({ consumedAt: new Date() })
       .where(and(eq(refreshTokens.userId, user.id), isNull(refreshTokens.consumedAt)));
     return reply.status(204).send();
+  });
+
+  // Spectators poll every few seconds; serving from memory keeps Neon asleep between balls.
+  // shortcut: per-process and unbounded, fine on one instance; move to Redis with a second (DEPLOYMENT §5).
+  const liveCache = new Map<string, { snapshot: unknown; updatedAt: Date }>();
+
+  /** The scorer's phone sends the whole snapshot after every ball; the first send creates the link. */
+  app.put('/matches/:matchId/live', { bodyLimit: 64 * 1024 }, async (req) => {
+    const user = await currentUser(req);
+    const { matchId } = matchParams.parse(req.params);
+    const snapshot = liveSnapshotSchema.parse(req.body);
+    const updatedAt = new Date();
+    const [row] = await db
+      .insert(liveMatches)
+      .values({ code: randomBytes(9).toString('base64url'), ownerId: user.id, matchId, snapshot })
+      .onConflictDoUpdate({
+        target: [liveMatches.ownerId, liveMatches.matchId],
+        set: { snapshot, updatedAt },
+      })
+      .returning({ code: liveMatches.code });
+    if (row === undefined) throw new Error('upsert returned nothing');
+    liveCache.set(row.code, { snapshot, updatedAt });
+    return { code: row.code };
+  });
+
+  app.get('/l/:code/data', async (req, reply) => {
+    const { code } = codeParams.parse(req.params);
+    let hit = liveCache.get(code);
+    if (hit === undefined) {
+      const [row] = await db.select().from(liveMatches).where(eq(liveMatches.code, code));
+      if (row === undefined) throw new HttpError(404, 'NOT_FOUND', 'No match at this link');
+      hit = { snapshot: row.snapshot, updatedAt: row.updatedAt };
+      liveCache.set(code, hit);
+    }
+    return reply.header('cache-control', 'no-store').send(hit);
+  });
+
+  // The page reads its code from the URL itself, so nothing from the request is written into it.
+  app.get('/l/:code', async (req, reply) => {
+    codeParams.parse(req.params);
+    return reply.type('text/html; charset=utf-8').send(LIVE_PAGE);
   });
 
   app.get('/health', async () => ({ ok: true }));

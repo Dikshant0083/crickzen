@@ -74,7 +74,11 @@ export default function Home() {
           <Action icon="trophy" label="Tournament" onPress={() => router.push('/tournament/new')} />
           <Action icon="shield" label="Teams" onPress={() => router.push('/teams')} />
           <Action icon="people" label="Players" onPress={() => router.push('/players')} />
-          <Action icon="podium" label="Leaders" onPress={() => router.push('/players')} />
+          <Action
+            icon="podium"
+            label="Leaders"
+            onPress={() => router.push({ pathname: '/players', params: { by: 'batting' } })}
+          />
         </View>
 
         {fresh && (

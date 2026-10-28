@@ -53,9 +53,6 @@ export default function TabsLayout() {
       <Tabs.Screen name="start" options={{ tabBarButton: () => <StartButton /> }} />
       <Tabs.Screen name="tournaments" options={tab('Cups', 'trophy')} />
       <Tabs.Screen name="me" options={tab('Me', 'person-circle')} />
-      {/* Reached from Home's shortcuts, kept off the bar so it fits five slots. */}
-      <Tabs.Screen name="players" options={{ ...tab('Players', 'people'), href: null }} />
-      <Tabs.Screen name="teams" options={{ ...tab('Teams', 'shield'), href: null }} />
     </Tabs>
   );
 }
