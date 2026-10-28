@@ -40,6 +40,16 @@ export const LIVE_PAGE = `<!doctype html>
   td .how { display:block; color:var(--muted); font-size:12px; }
   .result { font-weight:800; font-size:18px; color:var(--on-hero); margin-top:8px; }
   .error { text-align:center; padding:48px 0; }
+  .feed { list-style:none; margin:0; padding:0; }
+  .feed li { display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-top:1px solid var(--line); }
+  .feed li:first-child { border-top:0; }
+  .feed .ball { flex:none; width:40px; color:var(--text); background:var(--line); }
+  .feed .b4, .feed .b6, .feed .bW, .feed .bX { color:#fff; }
+  .feed .b4 { background:var(--four); } .feed .b6 { background:var(--six); }
+  .feed .bW { background:var(--out); } .feed .bX { background:var(--extra); }
+  .feed .over { flex:none; width:38px; color:var(--muted); font-size:13px; font-variant-numeric:tabular-nums; margin-top:6px; }
+  .feed .text { font-size:14px; margin-top:5px; }
+  .feed .wkt .text { color:var(--out); font-weight:700; }
 </style>
 </head>
 <body>
@@ -88,6 +98,20 @@ export const LIVE_PAGE = `<!doctype html>
       top.append(el('div', 'muted', 'Toss done · play starts soon'));
     }
     if (s.result !== null) top.append(el('div', 'result', s.result));
+
+    const feed = s.commentary ?? [];
+    if (feed.length > 0) {
+      const card = el('section', 'card');
+      card.append(el('h2', '', 'Commentary'));
+      const list = el('ul', 'feed');
+      for (const c of feed) {
+        const li = el('li', c.ball === 'W' ? 'wkt' : '');
+        li.append(el('span', 'ball ' + ballClass(c.ball), c.ball), el('span', 'over', c.over), el('span', 'text', c.text));
+        list.append(li);
+      }
+      card.append(list);
+      body.append(card);
+    }
 
     for (const inn of [...s.innings].reverse()) {
       const card = el('section', 'card');

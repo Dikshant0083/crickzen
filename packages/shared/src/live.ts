@@ -47,6 +47,19 @@ export const liveSnapshotSchema = z.object({
       }),
     )
     .max(4),
+  /** The latest balls of the current innings, newest first. Older app versions send none. */
+  commentary: z
+    .array(
+      z.object({
+        /** "14.3" */
+        over: z.string().max(8),
+        /** The ball's label, as in thisOver. */
+        ball: z.string().max(6),
+        text: z.string().max(200),
+      }),
+    )
+    .max(30)
+    .default([]),
 });
 
 export type LiveSnapshot = z.infer<typeof liveSnapshotSchema>;

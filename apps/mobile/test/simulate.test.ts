@@ -68,5 +68,9 @@ describe('simulate', () => {
     expect(snap.innings).toHaveLength(2);
     expect(snap.result).not.toBeNull();
     expect(snap.innings[0]?.batters.some((b) => b.out !== null)).toBe(true);
+    // Newest ball first, from the innings in progress (here the last one).
+    expect(snap.commentary).toHaveLength(30);
+    const last = result.value.innings[1]?.balls.at(-1);
+    expect(snap.commentary[0]?.over).toBe(`${last?.overNo}.${last?.ballInOver}`);
   });
 });

@@ -290,6 +290,7 @@ export function superOverPayloads(state: MatchState, matchId: string): Payload[]
 /** What spectators see at the share link, rebuilt from the whole state after every ball. */
 export function liveSnapshot(state: MatchState, name: (id: PlayerId) => string): LiveSnapshot {
   const cut = (s: string, n = 60) => s.slice(0, n);
+  const current = state.innings.at(-1);
   return {
     title: cut(state.config.teams.join(' vs '), 130),
     totalOvers: state.config.totalOvers,
@@ -325,5 +326,13 @@ export function liveSnapshot(state: MatchState, name: (id: PlayerId) => string):
         thisOver: inn.closed ? [] : inn.balls.filter((b) => b.overNo === lastOver).map(ballLabel),
       };
     }),
+    commentary: (current?.balls ?? [])
+      .slice(-30)
+      .reverse()
+      .map((b) => ({
+        over: `${b.overNo}.${b.ballInOver}`,
+        ball: ballLabel(b),
+        text: cut(commentary(b, name), 200),
+      })),
   };
 }

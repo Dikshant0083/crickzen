@@ -44,6 +44,7 @@ const snapshot = (runs: number): LiveSnapshot => ({
       thisOver: ['1', '4', 'W'],
     },
   ],
+  commentary: [{ over: '2.3', ball: 'W', text: 'Arjun to Rahul, OUT! Bowled (Rahul)' }],
 });
 
 const share = (token: string | undefined, matchId: string, body: unknown) =>
@@ -73,6 +74,15 @@ describe('live share links', () => {
     expect(page.headers['content-type']).toContain('text/html');
     // The page is static: nothing from the snapshot or URL is written into its HTML.
     expect(page.body).not.toContain('Rahul');
+  });
+
+  it('accepts snapshots from app versions that send no commentary', async () => {
+    const token = await signUp('9876543210');
+    const { commentary: _, ...old } = snapshot(5);
+    const res = await share(token, 'm1', old);
+    expect(res.statusCode).toBe(200);
+    const data = await app.inject({ method: 'GET', url: `/l/${res.json().code}/data` });
+    expect(data.json().snapshot.commentary).toEqual([]);
   });
 
   it('reads from the database when the cache is cold', async () => {
